@@ -3,6 +3,7 @@ import requests
 import json
 from docx import Document
 from io import BytesIO
+import random
 
 # Set page configuration
 st.set_page_config(page_title="Generador de Contenido de Libro", page_icon="📚", layout="wide")
@@ -20,7 +21,7 @@ def crear_columna_info():
     2. Especifique el número de capítulos (hasta 15).
     3. Genere los títulos de los capítulos.
     4. Edite los títulos de los capítulos si lo desea.
-    5. Genere el contenido completo de los capítulos (hasta 10 páginas cada uno).
+    5. Genere el contenido completo de los capítulos (5 a 10 páginas cada uno).
     6. Descargue el documento DOCX con el contenido del libro y las referencias.
 
     ### Autor:
@@ -47,8 +48,8 @@ with col2:
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}' dirigido a {audiencia}. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
-            "max_tokens": 3048,
-            "temperature": 0.5,
+            "max_tokens": 2048,
+            "temperature": 0.7,
             "top_p": 0.7,
             "top_k": 50,
             "repetition_penalty": 1,
@@ -73,10 +74,11 @@ with col2:
         return response.json()
 
     def generar_contenido(titulo_libro, capitulo, contexto):
+        num_palabras = random.randint(1500, 3000)  # Variable length between 5 and 10 pages
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente 10 páginas (alrededor de 3000 palabras). Limítate a un nivel de división (ejemplo: 1, 1.1, 1.2, 2, 2.1, 2.2, etc:\n\nContexto: {contexto}\n\nContenido del capítulo:",
+            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente {num_palabras} palabras. Evita repeticiones y subdivisiones:\n\nContexto: {contexto}\n\nContenido del capítulo:",
             "max_tokens": 4096,
             "temperature": 0.7,
             "top_p": 0.7,
@@ -90,20 +92,17 @@ with col2:
         response = requests.post(url, headers=headers, data=payload)
         return response.json()['output']['choices'][0]['text'].strip()
 
-    def create_docx(titulo_libro, capitulos_contenido, referencias):
+    def create_docx(titulo_libro, capitulos_contenido):
         doc = Document()
         doc.add_heading(f'{titulo_libro}', 0)
 
-        # Capítulos y contenido
-        for i, (capitulo, contenido) in enumerate(capitulos_contenido.items(), 1):
+        # Capítulos y contenido con referencias
+        for i, (capitulo, data) in enumerate(capitulos_contenido.items(), 1):
             doc.add_heading(f'Capítulo {i}: {capitulo}', level=1)
-            doc.add_paragraph(contenido)
-
-        # Referencias
-        doc.add_page_break()
-        doc.add_heading('Referencias', level=1)
-        for referencia in referencias:
-            doc.add_paragraph(referencia, style='List Bullet')
+            doc.add_paragraph(data['contenido'])
+            doc.add_heading('Referencias', level=2)
+            for referencia in data['referencias']:
+                doc.add_paragraph(referencia, style='List Bullet')
 
         return doc
 
@@ -150,27 +149,28 @@ with col2:
         if st.button("Generar contenido de capítulos"):
             with st.spinner("Generando contenido y referencias..."):
                 capitulos_contenido = {}
-                todas_referencias = []
 
                 for capitulo in st.session_state.capitulos_editados:
                     resultados_busqueda = buscar_informacion(f"{capitulo} {titulo_libro}")
                     contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("results", [])])
                     contenido = generar_contenido(titulo_libro, capitulo, contexto)
-                    capitulos_contenido[capitulo] = contenido
                     referencias = [formatear_referencia_apa(item) for item in resultados_busqueda.get("results", [])[:10]]  # Limit to 10 references
-                    todas_referencias.extend(referencias)
+
+                    capitulos_contenido[capitulo] = {
+                        'contenido': contenido,
+                        'referencias': referencias
+                    }
 
                 st.subheader("Contenido del libro generado:")
-                for capitulo, contenido in capitulos_contenido.items():
+                for capitulo, data in capitulos_contenido.items():
                     with st.expander(f"Capítulo: {capitulo}"):
-                        st.write(contenido)
-
-                st.subheader("Referencias:")
-                for referencia in todas_referencias:
-                    st.markdown(f"- {referencia}")
+                        st.write(data['contenido'])
+                        st.write("**Referencias:**")
+                        for referencia in data['referencias']:
+                            st.markdown(f"- {referencia}")
 
                 # Botón para descargar el documento
-                doc = create_docx(titulo_libro, capitulos_contenido, todas_referencias)
+                doc = create_docx(titulo_libro, capitulos_contenido)
                 buffer = BytesIO()
                 doc.save(buffer)
                 buffer.seek(0)
