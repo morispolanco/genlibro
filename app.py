@@ -47,8 +47,8 @@ with col2:
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}' dirigido a {audiencia}. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
-            "max_tokens": 2048,
-            "temperature": 0.7,
+            "max_tokens": 3048,
+            "temperature": 0.5,
             "top_p": 0.7,
             "top_k": 50,
             "repetition_penalty": 1,
@@ -76,7 +76,7 @@ with col2:
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente 10 páginas (alrededor de 3000 palabras). Limítate a una subdivisión o subcapítulo:\n\nContexto: {contexto}\n\nContenido del capítulo:",
+            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente 10 páginas (alrededor de 3000 palabras). Limítate a un nivel de división (ejemplo: 1, 1.1, 1.2, 2, 2.1, 2.2, etc:\n\nContexto: {contexto}\n\nContenido del capítulo:",
             "max_tokens": 4096,
             "temperature": 0.7,
             "top_p": 0.7,
