@@ -46,7 +46,7 @@ with col2:
     def generar_capitulos(titulo_libro, num_capitulos):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            "model": "meta-llama/Meta-Llama-3-70B-Instruct-Turbo",
             "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}'. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
             "max_tokens": 2048,
             "temperature": 0.7,
