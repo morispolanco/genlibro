@@ -42,11 +42,11 @@ with col2:
     TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
     SERPLY_API_KEY = st.secrets["SERPLY_API_KEY"]
 
-    def generar_capitulos(titulo_libro, num_capitulos):
+    def generar_capitulos(titulo_libro, num_capitulos, audiencia):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}'. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
+            "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}' dirigido a {audiencia}. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
             "max_tokens": 2048,
             "temperature": 0.7,
             "top_p": 0.7,
@@ -76,7 +76,7 @@ with col2:
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente 10 páginas (alrededor de 3000 palabras):\n\nContexto: {contexto}\n\nContenido del capítulo:",
+            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente 10 páginas (alrededor de 3000 palabras). Limítate a una subdivisión o subcapítulo:\n\nContexto: {contexto}\n\nContenido del capítulo:",
             "max_tokens": 4096,
             "temperature": 0.7,
             "top_p": 0.7,
@@ -132,12 +132,13 @@ with col2:
 
     # Interfaz de usuario
     titulo_libro = st.text_input("Ingresa el título del libro:")
+    audiencia = st.selectbox("Selecciona la audiencia:", ["Principiantes", "Conocedores", "Expertos"])
     num_capitulos = st.number_input("Número de capítulos (máximo 15):", min_value=1, max_value=15, value=5)
 
     if st.button("Generar títulos de capítulos"):
         if titulo_libro:
             with st.spinner("Generando títulos de capítulos..."):
-                capitulos = generar_capitulos(titulo_libro, num_capitulos)
+                capitulos = generar_capitulos(titulo_libro, num_capitulos, audiencia)
                 st.session_state.capitulos = capitulos
 
     if 'capitulos' in st.session_state:
@@ -156,7 +157,7 @@ with col2:
                     contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("results", [])])
                     contenido = generar_contenido(titulo_libro, capitulo, contexto)
                     capitulos_contenido[capitulo] = contenido
-                    referencias = [formatear_referencia_apa(item) for item in resultados_busqueda.get("results", [])]
+                    referencias = [formatear_referencia_apa(item) for item in resultados_busqueda.get("results", [])[:10]]  # Limit to 10 references
                     todas_referencias.extend(referencias)
 
                 st.subheader("Contenido del libro generado:")
