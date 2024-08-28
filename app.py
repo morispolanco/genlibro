@@ -13,7 +13,7 @@ def crear_columna_info():
     st.markdown("""
     ## Sobre esta aplicación
 
-    Esta aplicación genera el contenido completo de los capítulos para un libro basado en el título proporcionado.
+    Esta aplicación genera una descripción detallada de los capítulos para un libro basado en el título proporcionado.
 
     ### Cómo usar la aplicación:
 
@@ -21,8 +21,8 @@ def crear_columna_info():
     2. Especifique el número de capítulos (hasta 15).
     3. Genere los títulos de los capítulos.
     4. Edite los títulos de los capítulos si lo desea.
-    5. Genere el contenido completo de los capítulos (5 a 10 páginas cada uno).
-    6. Descargue el documento DOCX con el contenido del libro y las referencias.
+    5. Genere la descripción detallada de los capítulos.
+    6. Descargue el documento DOCX con la descripción y las citas.
 
     ### Autor:
     **Moris Polanco**, [Fecha actual]
@@ -43,11 +43,11 @@ with col2:
     TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
     SERPLY_API_KEY = st.secrets["SERPLY_API_KEY"]
 
-    def generar_capitulos(titulo_libro, num_capitulos, audiencia):
+    def generar_capitulos(titulo_libro, num_capitulos):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}' dirigido a {audiencia}. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
+            "prompt": f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}'. Cada título debe estar en una línea nueva y ser relevante al tema del libro.",
             "max_tokens": 2048,
             "temperature": 0.7,
             "top_p": 0.7,
@@ -73,13 +73,12 @@ with col2:
         response = requests.get(url, headers=headers)
         return response.json()
 
-    def generar_contenido(titulo_libro, capitulo, contexto):
-        num_palabras = random.randint(1500, 3000)  # Variable length between 5 and 10 pages
+    def generar_descripcion(titulo_libro, capitulo, contexto):
         url = "https://api.together.xyz/inference"
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Escribe el contenido completo del capítulo '{capitulo}' para el libro titulado '{titulo_libro}' basado en el siguiente contexto académico. El contenido debe ser detallado, informativo y tener una extensión de aproximadamente {num_palabras} palabras. Evita repeticiones y subdivisiones:\n\nContexto: {contexto}\n\nContenido del capítulo:",
-            "max_tokens": 4096,
+            "prompt": f"Escribe una descripción detallada para el capítulo '{capitulo}' del libro titulado '{titulo_libro}'. Basado en el siguiente contexto académico:\n\nContexto: {contexto}\n\nDescripción:",
+            "max_tokens": 2048,
             "temperature": 0.7,
             "top_p": 0.7,
             "top_k": 50,
@@ -91,20 +90,6 @@ with col2:
         }
         response = requests.post(url, headers=headers, data=payload)
         return response.json()['output']['choices'][0]['text'].strip()
-
-    def create_docx(titulo_libro, capitulos_contenido):
-        doc = Document()
-        doc.add_heading(f'{titulo_libro}', 0)
-
-        # Capítulos y contenido con referencias
-        for i, (capitulo, data) in enumerate(capitulos_contenido.items(), 1):
-            doc.add_heading(f'Capítulo {i}: {capitulo}', level=1)
-            doc.add_paragraph(data['contenido'])
-            doc.add_heading('Referencias', level=2)
-            for referencia in data['referencias']:
-                doc.add_paragraph(referencia, style='List Bullet')
-
-        return doc
 
     def formatear_referencia_apa(ref):
         authors = ref.get('author', 'Autor desconocido')
@@ -129,15 +114,38 @@ with col2:
         
         return reference
 
+    def obtener_citas_directas(resultados_busqueda, num_citas=10):
+        citas = []
+        for item in resultados_busqueda.get("results", [])[:num_citas]:
+            citas.append({
+                "texto": item.get("snippet", "Cita no disponible"),
+                "referencia": formatear_referencia_apa(item)
+            })
+        return citas
+
+    def create_docx(titulo_libro, capitulos_contenido):
+        doc = Document()
+        doc.add_heading(f'{titulo_libro}', 0)
+
+        # Capítulos, descripciones y citas
+        for i, (capitulo, contenido) in enumerate(capitulos_contenido.items(), 1):
+            doc.add_heading(f'Capítulo {i}: {capitulo}', level=1)
+            doc.add_paragraph(contenido['descripcion'])
+            doc.add_heading('Citas', level=2)
+            for cita in contenido['citas']:
+                doc.add_paragraph(f'"{cita["texto"]}" - {cita["referencia"]}', style='Quote')
+            doc.add_paragraph('')
+
+        return doc
+
     # Interfaz de usuario
     titulo_libro = st.text_input("Ingresa el título del libro:")
-    audiencia = st.selectbox("Selecciona la audiencia:", ["Principiantes", "Conocedores", "Expertos"])
     num_capitulos = st.number_input("Número de capítulos (máximo 15):", min_value=1, max_value=15, value=5)
 
     if st.button("Generar títulos de capítulos"):
         if titulo_libro:
             with st.spinner("Generando títulos de capítulos..."):
-                capitulos = generar_capitulos(titulo_libro, num_capitulos, audiencia)
+                capitulos = generar_capitulos(titulo_libro, num_capitulos)
                 st.session_state.capitulos = capitulos
 
     if 'capitulos' in st.session_state:
@@ -146,28 +154,27 @@ with col2:
         st.session_state.capitulos_editados = capitulos_editados.split('\n')
 
     if 'capitulos_editados' in st.session_state:
-        if st.button("Generar contenido de capítulos"):
-            with st.spinner("Generando contenido y referencias..."):
+        if st.button("Generar descripción de capítulos y citas"):
+            with st.spinner("Generando descripciones y citas..."):
                 capitulos_contenido = {}
 
                 for capitulo in st.session_state.capitulos_editados:
                     resultados_busqueda = buscar_informacion(f"{capitulo} {titulo_libro}")
                     contexto = "\n".join([item["snippet"] for item in resultados_busqueda.get("results", [])])
-                    contenido = generar_contenido(titulo_libro, capitulo, contexto)
-                    referencias = [formatear_referencia_apa(item) for item in resultados_busqueda.get("results", [])[:10]]  # Limit to 10 references
-
+                    descripcion = generar_descripcion(titulo_libro, capitulo, contexto)
+                    citas = obtener_citas_directas(resultados_busqueda)
                     capitulos_contenido[capitulo] = {
-                        'contenido': contenido,
-                        'referencias': referencias
+                        "descripcion": descripcion,
+                        "citas": citas
                     }
 
-                st.subheader("Contenido del libro generado:")
-                for capitulo, data in capitulos_contenido.items():
+                st.subheader("Descripción de los capítulos generada:")
+                for capitulo, contenido in capitulos_contenido.items():
                     with st.expander(f"Capítulo: {capitulo}"):
-                        st.write(data['contenido'])
-                        st.write("**Referencias:**")
-                        for referencia in data['referencias']:
-                            st.markdown(f"- {referencia}")
+                        st.write(contenido['descripcion'])
+                        st.write("**Citas:**")
+                        for cita in contenido['citas']:
+                            st.markdown(f"> \"{cita['texto']}\" - {cita['referencia']}")
 
                 # Botón para descargar el documento
                 doc = create_docx(titulo_libro, capitulos_contenido)
@@ -175,8 +182,10 @@ with col2:
                 doc.save(buffer)
                 buffer.seek(0)
                 st.download_button(
-                    label="Descargar libro completo en DOCX",
+                    label="Descargar descripción en DOCX",
                     data=buffer,
                     file_name=f"{titulo_libro.replace(' ', '_')}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
+
+                st.markdown(f"[Descargar documento completo](#)")
