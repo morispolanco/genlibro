@@ -66,7 +66,7 @@ with col2:
         return [capitulo.strip() for capitulo in capitulos if capitulo.strip()]
 
     def buscar_informacion(query):
-        url = f"https://api.serply.io/v1/scholar/q={query}"
+        url = f"https://api.serply.io/v1/scholar?q={query}"
         headers = {
             'X-Api-Key': SERPLY_API_KEY,
             'Content-Type': 'application/json',
@@ -99,10 +99,16 @@ with col2:
 
         # Buscar información para citas
         resultados_busqueda = buscar_informacion(f"{capitulo} {titulo_libro}")
-        citas = [item["snippet"] for item in resultados_busqueda.get("results", [])[:10]]
-        citas_formateadas = [f'"{cita}" - {formatear_referencia_apa(item)}' for cita, item in zip(citas, resultados_busqueda.get("results", []))]
+        citas = []
+        citas_formateadas = []
+        
+        for item in resultados_busqueda.get("results", [])[:10]:
+            cita = item["snippet"]
+            referencia = formatear_referencia_apa(item)
+            citas.append(f'"{cita}" - {referencia}')
+            citas_formateadas.append(referencia)
 
-        return descripcion, citas_formateadas
+        return descripcion, citas, citas_formateadas
 
     def generar_contenido_capitulo(titulo_libro, capitulo, audiencia, descripcion, citas):
         url = "https://api.together.xyz/inference"
@@ -110,7 +116,7 @@ with col2:
                   f"dirigido a {audiencia}, basado en la siguiente descripción y citas. El contenido debe tener al menos 15 páginas.\n\n"
                   f"Descripción: {descripcion}\n\nCitas: {', '.join(citas)}\n\nContenido del capítulo:")
         payload = json.dumps({
-            "model": "meta-llama/Meta-Llama-3-70B-Instruct-Turbo",
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "prompt": prompt,
             "max_tokens": 4096,
             "temperature": 0.7,
@@ -147,15 +153,15 @@ with col2:
 
         return doc
 
-    def formatear_referencia_apa(ref):
-        authors = ref.get('author', 'Autor desconocido')
-        year = ref.get('year', 's.f.')
-        title = ref.get('title', 'Título desconocido')
-        journal = ref.get('journal', '')
-        volume = ref.get('volume', '')
-        issue = ref.get('issue', '')
-        pages = ref.get('pages', '')
-        url = ref.get('url', '')
+    def formatear_referencia_apa(item):
+        authors = item.get('author', 'Autor desconocido')
+        year = item.get('year', 's.f.')
+        title = item.get('title', 'Título desconocido')
+        journal = item.get('journal', '')
+        volume = item.get('volume', '')
+        issue = item.get('issue', '')
+        pages = item.get('pages', '')
+        url = item.get('url', '')
 
         reference = f"{authors} ({year}). {title}."
         if journal:
@@ -193,9 +199,8 @@ with col2:
                 todas_referencias = []
 
                 for capitulo in st.session_state.capitulos_editados:
-                    descripcion, citas = generar_descripcion_y_citas(titulo_libro, capitulo, audiencia)
-                    capitulos_contenido[capitulo] = (descripcion, citas, "")
-                    referencias = [formatear_referencia_apa(item) for item in citas]
+                    descripcion, citas, referencias = generar_descripcion_y_citas(titulo_libro, capitulo, audiencia)
+                    capitulos_contenido[capitulo] = (descripcion, citas, None)
                     todas_referencias.extend(referencias)
 
                 st.session_state.capitulos_contenido = capitulos_contenido
@@ -213,7 +218,7 @@ with col2:
                 st.write("---")
 
             capitulo_especifico = st.selectbox("Selecciona un capítulo para generar contenido:", st.session_state.capitulos_editados)
-            
+
             if st.button("Generar contenido para el capítulo seleccionado"):
                 with st.spinner("Generando contenido del capítulo..."):
                     descripcion, citas, _ = st.session_state.capitulos_contenido[capitulo_especifico]
