@@ -49,7 +49,7 @@ with col2:
         prompt = (f"Genera {num_capitulos} títulos de capítulos para un libro titulado '{titulo_libro}' "
                   f"dirigido a {audiencia}. Cada título debe estar en una línea nueva y ser relevante al tema del libro.")
         payload = json.dumps({
-            "model": "meta-llama/Meta-Llama-3-70B-Instruct-Turbo",
+            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "prompt": prompt,
             "max_tokens": 2048,
             "temperature": 0.7,
