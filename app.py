@@ -90,7 +90,7 @@ with col2:
             'Content-Type': 'application/json'
         }
         response = requests.post(url, headers=headers, data=payload)
-        return response.json()['output']['choices'][0]['text'].strip().split('\n')
+        return response.json()['output']['choices'][0]['text'].strip()
 
     def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_capitulo):
         url = "https://api.together.xyz/inference"
@@ -130,19 +130,19 @@ with col2:
 
     if 'tabla_contenido' in st.session_state:
         st.subheader("Tabla de contenido generada:")
-        tabla_contenido_editada = []
-        for i, capitulo in enumerate(st.session_state.tabla_contenido):
-            capitulo_editado = st.text_input(f"Capítulo {i+1}", value=capitulo)
-            tabla_contenido_editada.append(capitulo_editado)
+        tabla_contenido_editada = st.text_area("Edite la tabla de contenido", value=st.session_state.tabla_contenido, height=300)
         st.session_state.tabla_contenido_editada = tabla_contenido_editada
 
     if 'tabla_contenido_editada' in st.session_state:
         if st.button("Generar contenido de capítulos"):
             with st.spinner("Generando contenido de capítulos..."):
                 contenido_capitulos = []
-                for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
-                    contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo.split(": ", 1)[1], i+1)
-                    contenido_capitulos.append(contenido)
+                capitulos = st.session_state.tabla_contenido_editada.split('\n')
+                for i, capitulo in enumerate(capitulos):
+                    if capitulo.strip():
+                        titulo_capitulo = capitulo.split(": ", 1)[1] if ": " in capitulo else capitulo
+                        contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, i+1)
+                        contenido_capitulos.append(contenido)
                 st.session_state.contenido_capitulos = contenido_capitulos
                 st.success("Contenido de capítulos generado con éxito.")
 
@@ -163,11 +163,11 @@ with col2:
 
                 # Agregar tabla de contenido
                 doc.add_heading("Tabla de Contenido", level=1)
-                for capitulo in tabla_contenido:
+                for capitulo in tabla_contenido.split('\n'):
                     doc.add_paragraph(capitulo, style='Sin Sangría')
 
                 # Agregar contenido de los capítulos
-                for i, (capitulo, contenido) in enumerate(zip(tabla_contenido, contenido)):
+                for i, (capitulo, contenido) in enumerate(zip(tabla_contenido.split('\n'), contenido)):
                     doc.add_page_break()
                     doc.add_heading(capitulo, level=1)
                     paragraphs = contenido.split('\n')
