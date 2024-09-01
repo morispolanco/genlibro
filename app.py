@@ -68,7 +68,6 @@ def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_cap
     del libro de no ficción "{titulo_libro}" en el género de {genero}.
     El contenido debe ser adecuado para una audiencia {audiencia}, estar en {idioma},
     y estructurarse en {subdivisiones} subdivisiones si es posible.
-    Incluye subtítulos, ejemplos y explicaciones detalladas.
     No repitas el título del capítulo al inicio del contenido.
     Comienza directamente con el contenido del capítulo.
     """
