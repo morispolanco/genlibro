@@ -79,6 +79,17 @@ def generar_contenido_capitulo(titulo_libro, titulo_capitulo, numero_capitulo, a
     response = requests.post(url, headers=headers, data=payload)
     return response.json()['output']['choices'][0]['text'].strip()
 
+def clean_text(text):
+    """
+    Cleans the text to replace Markdown-like symbols with proper formatting.
+    """
+    # Replace Markdown-like bold (**text**) with bold for Word
+    text = text.replace("**", "")
+
+    # We could add more replacements if needed for other Markdown symbols
+
+    return text
+
 if st.button("Generar tabla de contenido"):
     if titulo_libro:
         with st.spinner("Generando tabla de contenido..."):
@@ -103,7 +114,8 @@ if 'tabla_contenido_editada' in st.session_state:
                 else:
                     capitulo_titulo = titulo_capitulo  # Fallback in case the format is different
                 contenido = generar_contenido_capitulo(titulo_libro, capitulo_titulo, i+1, audiencia, instrucciones_adicionales)
-                contenido_capitulos.append(contenido)
+                contenido_cleaned = clean_text(contenido)
+                contenido_capitulos.append(contenido_cleaned)
             st.session_state.contenido_capitulos = contenido_capitulos
             st.success("Contenido de capítulos generado con éxito.")
 
@@ -111,13 +123,11 @@ if 'tabla_contenido_editada' in st.session_state:
         def create_docx(titulo, tabla_contenido, contenido):
             doc = Document()
 
-            # Check if the style already exists, and add it if not
             try:
                 style = doc.styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
                 style.font.name = 'Calibri'
                 style.font.size = Pt(11)
-                style.paragraph_format.space_after = Pt(10)
-                style.paragraph_format.first_line_indent = Pt(0)
+                style.paragraph_format.left_indent = Pt(0)
             except KeyError:
                 # Style might already exist
                 style = doc.styles['Sin Sangría']
@@ -127,10 +137,10 @@ if 'tabla_contenido_editada' in st.session_state:
             # Add table of contents
             doc.add_heading("Tabla de Contenido", level=1)
             for capitulo in tabla_contenido:
-                doc.add_paragraph(capitulo, style='Sin Sangría')
+                doc.add_paragraph(clean_text(capitulo), style='Sin Sangría')
 
             # Add chapter contents
-            for i, capitulo in enumerate(contenido):
+            for i, capitulo_contenido in enumerate(contenido):
                 if i < len(tabla_contenido):
                     try:
                         chapter_title = tabla_contenido[i].split(": ", 1)[1]
@@ -140,7 +150,7 @@ if 'tabla_contenido_editada' in st.session_state:
                     chapter_title = f"Capítulo {i+1}"
                 doc.add_page_break()
                 doc.add_heading(f"Capítulo {i+1}: {chapter_title}", level=2)
-                doc.add_paragraph(capitulo, style='Sin Sangría')
+                doc.add_paragraph(capitulo_contenido, style='Sin Sangría')
 
             doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
 
