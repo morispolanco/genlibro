@@ -3,7 +3,7 @@ import requests
 import json
 from docx import Document
 from docx.shared import Pt
-from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from io import BytesIO
 
 # Set page configuration
@@ -69,11 +69,6 @@ with col2:
         Genera una tabla de contenido para un libro de no ficción titulado "{titulo}" en el género de {genero}.
         La tabla de contenido debe tener {num_capitulos} capítulos.
         Los títulos de los capítulos deben ser coherentes, atractivos y relevantes para el tema del libro.
-        Formato de salida:
-        Capítulo 1: [Título del capítulo 1]
-        Capítulo 2: [Título del capítulo 2]
-        ...
-        Capítulo {num_capitulos}: [Título del capítulo {num_capitulos}]
         """
         
         payload = json.dumps({
@@ -130,19 +125,16 @@ with col2:
 
     if 'tabla_contenido' in st.session_state:
         st.subheader("Tabla de contenido generada:")
-        tabla_contenido_editada = st.text_area("Edite la tabla de contenido", value=st.session_state.tabla_contenido, height=300)
-        st.session_state.tabla_contenido_editada = tabla_contenido_editada
+        tabla_contenido_editada = st.text_area("Edite la tabla de contenido:", value=st.session_state.tabla_contenido, height=200)
+        st.session_state.tabla_contenido_editada = tabla_contenido_editada.split('\n')
 
     if 'tabla_contenido_editada' in st.session_state:
         if st.button("Generar contenido de capítulos"):
             with st.spinner("Generando contenido de capítulos..."):
                 contenido_capitulos = []
-                capitulos = st.session_state.tabla_contenido_editada.split('\n')
-                for i, capitulo in enumerate(capitulos):
-                    if capitulo.strip():
-                        titulo_capitulo = capitulo.split(": ", 1)[1] if ": " in capitulo else capitulo
-                        contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, i+1)
-                        contenido_capitulos.append(contenido)
+                for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
+                    contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo.split(": ", 1)[1], i+1)
+                    contenido_capitulos.append(contenido)
                 st.session_state.contenido_capitulos = contenido_capitulos
                 st.success("Contenido de capítulos generado con éxito.")
 
@@ -150,7 +142,7 @@ with col2:
             def create_docx(titulo, genero, tabla_contenido, contenido):
                 doc = Document()
                 
-                # Crear estilos sin sangría
+                # Crear estilos sin sangría y justificación completa
                 styles = doc.styles
                 style = styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
                 style.font.name = 'Calibri'
@@ -163,17 +155,18 @@ with col2:
 
                 # Agregar tabla de contenido
                 doc.add_heading("Tabla de Contenido", level=1)
-                for capitulo in tabla_contenido.split('\n'):
+                for capitulo in tabla_contenido:
                     doc.add_paragraph(capitulo, style='Sin Sangría')
 
                 # Agregar contenido de los capítulos
-                for i, (capitulo, contenido) in enumerate(zip(tabla_contenido.split('\n'), contenido)):
+                for i, (capitulo, contenido) in enumerate(zip(tabla_contenido, contenido)):
                     doc.add_page_break()
                     doc.add_heading(capitulo, level=1)
                     paragraphs = contenido.split('\n')
                     for para in paragraphs:
                         if para.strip():
-                            doc.add_paragraph(para.strip(), style='Sin Sangría')
+                            p = doc.add_paragraph(para.strip(), style='Sin Sangría')
+                            p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY  # Justificación completa
 
                 doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
 
