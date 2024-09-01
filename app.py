@@ -37,7 +37,7 @@ def generar_tabla_contenido(titulo, num_capitulos, audiencia, instrucciones_adic
     """
 
     payload = json.dumps({
-        "model": "mistralai/Mistral-7B-v0.1",
+        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
         "prompt": prompt,
         "max_tokens": 1024,
         "temperature": 0.7,
@@ -64,7 +64,7 @@ def generar_contenido_capitulo(titulo_libro, titulo_capitulo, numero_capitulo, a
     """
 
     payload = json.dumps({
-        "model": "mistralai/Mistral-7B-v0.1",
+        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
         "prompt": prompt,
         "max_tokens": 4096,
         "temperature": 0.7,
