@@ -3,8 +3,6 @@ import requests
 import json
 from docx import Document
 from docx.shared import Pt
-from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 
 # Set page configuration
@@ -108,7 +106,7 @@ if 'tabla_contenido_editada' in st.session_state:
         def create_docx(titulo, tabla_contenido, contenido):
             doc = Document()
 
-            # Crear estilos sin sangría y justificados
+            # Create styles without indentation
             styles = doc.styles
             style = styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
             style.font.name = 'Calibri'
@@ -118,17 +116,18 @@ if 'tabla_contenido_editada' in st.session_state:
 
             doc.add_heading(titulo, 0)
 
-            # Agregar tabla de contenido
-            doc.add_heading("Tabla de Contenido", level=1).alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            # Add table of contents
+            doc.add_heading("Tabla de Contenido", level=1)
             for capitulo in tabla_contenido:
-                doc.add_paragraph(capitulo, style='Sin Sangría').alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                doc.add_paragraph(capitulo, style='Sin Sangría')
 
-            # Agregar contenido de capítulos
+            # Add chapter contents
             for i, capitulo in enumerate(contenido):
                 doc.add_page_break()
-                doc.add_paragraph(capitulo, style='Sin Sangría').alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                doc.add_heading(f"Capítulo {i+1}: {tabla_contenido[i].split(': ', 1)[1]}", level=2)
+                doc.add_paragraph(capitulo, style='Sin Sangría')
 
-            doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría').alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
 
             return doc
 
