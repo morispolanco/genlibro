@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 import json
 from docx import Document
+from docx.shared import Pt
+from docx.enum.style import WD_STYLE_TYPE
 from io import BytesIO
 
 # Set page configuration
@@ -92,10 +94,11 @@ with col2:
     def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_capitulo):
         url = "https://api.together.xyz/inference"
         prompt = f"""
-        Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
-        del libro de no ficción "{titulo_libro}" en el género de {genero}.
+        Escribe el contenido detallado para el capítulo {numero_capitulo} del libro de no ficción "{titulo_libro}" en el género de {genero}.
         El contenido debe ser informativo, bien estructurado y relevante para el tema del libro.
         Incluye subtítulos, ejemplos y explicaciones detalladas.
+        No repitas el título del capítulo "{titulo_capitulo}" al inicio del contenido.
+        Comienza directamente con el contenido del capítulo.
         """
         
         payload = json.dumps({
@@ -144,14 +147,26 @@ with col2:
         if 'contenido_capitulos' in st.session_state:
             def create_docx(titulo, genero, capitulos, contenido):
                 doc = Document()
+                
+                # Crear estilos sin sangría
+                styles = doc.styles
+                style = styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
+                style.font.name = 'Calibri'
+                style.font.size = Pt(11)
+                style.paragraph_format.space_after = Pt(10)
+                style.paragraph_format.first_line_indent = Pt(0)
+                
                 doc.add_heading(titulo, 0)
                 doc.add_paragraph(f"Género: {genero}")
 
                 for i, (capitulo, contenido) in enumerate(zip(capitulos, contenido)):
                     doc.add_heading(f"Capítulo {i+1}: {capitulo}", level=1)
-                    doc.add_paragraph(contenido)
+                    paragraphs = contenido.split('\n')
+                    for para in paragraphs:
+                        if para.strip():
+                            doc.add_paragraph(para.strip(), style='Sin Sangría')
 
-                doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.')
+                doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
 
                 return doc
 
