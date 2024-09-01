@@ -5,70 +5,107 @@ from docx import Document
 from io import BytesIO
 
 # Set page configuration
-st.set_page_config(page_title="Generador de Contenido de Libro", page_icon="📚", layout="wide")
+st.set_page_config(page_title="Generador de Libros de No Ficción", page_icon="📚", layout="wide")
 
 # Function to create the information column
 def crear_columna_info():
     st.markdown("""
     ## Sobre esta aplicación
 
-    Esta aplicación genera contenido de libro con capítulos y citas relevantes en formato APA.
+    Esta aplicación genera capítulos para libros de no ficción basados en el título, género y número de capítulos especificados por el usuario.
 
     ### Cómo usar la aplicación:
 
     1. Ingrese el título del libro.
-    2. Selecciona el número de capítulos y la audiencia objetivo.
-    3. Agrega observaciones adicionales (opcional).
-    4. Genere el contenido del libro con descripciones breves de cada capítulo y citas relevantes.
+    2. Seleccione el género de no ficción.
+    3. Especifique el número de capítulos (máximo 24).
+    4. Haga clic en "Generar capítulos" para crear la estructura del libro.
+    5. Edite los títulos de los capítulos si lo desea.
+    6. Haga clic en "Generar contenido de capítulos" para crear el contenido.
+    7. Descargue el libro completo en formato DOCX.
 
-    ### Autor:
-    **Moris Polanco**, [Fecha actual]
+    ### Autor y actualización:
+    **[Tu Nombre]**, [Fecha actual]
+
+    ### Cómo citar esta aplicación (formato APA):
+    [Tu Apellido], [Inicial del Nombre]. (Año). *Generador de Libros de No Ficción* [Aplicación web]. [URL de tu aplicación]
 
     ---
-    **Nota:** Verifique la información con fuentes adicionales para un análisis más profundo.
+    **Nota:** Esta aplicación utiliza inteligencia artificial para generar contenido. Siempre revise y edite el contenido generado para garantizar precisión y calidad.
     """)
 
 # Titles and Main Column
-st.title("Generador de Contenido de Libro")
+st.title("Generador de Libros de No Ficción")
 
+# Create two columns
 col1, col2 = st.columns([1, 2])
 
+# Column 1 content
 with col1:
     crear_columna_info()
 
+# Column 2 content
 with col2:
     TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
-    SERPLY_API_KEY = st.secrets["SERPLY_API_KEY"]
 
-    def generar_capitulos(titulo_libro, num_capitulos):
+    # Géneros de no ficción
+    generos_no_ficcion = [
+        "Autobiografía", "Biografía", "Historia", "Ciencia", "Tecnología",
+        "Filosofía", "Psicología", "Autoayuda", "Negocios", "Economía",
+        "Política", "Sociología", "Antropología", "Viajes", "Naturaleza",
+        "Medio ambiente", "Salud y bienestar", "Cocina", "Arte", "Música"
+    ]
+
+    st.write("Ingrese los detalles del libro:")
+    titulo_libro = st.text_input("Título del libro:")
+    genero = st.selectbox("Género de no ficción:", generos_no_ficcion)
+    num_capitulos = st.number_input("Número de capítulos:", min_value=1, max_value=24, value=10)
+
+    def generar_capitulos(titulo, genero, num_capitulos):
         url = "https://api.together.xyz/inference"
+        prompt = f"""
+        Genera {num_capitulos} títulos de capítulos para un libro de no ficción titulado "{titulo}" en el género de {genero}.
+        Los títulos deben ser coherentes, atractivos y relevantes para el tema del libro.
+        Formato de salida:
+        1. [Título del capítulo 1]
+        2. [Título del capítulo 2]
+        ...
+        {num_capitulos}. [Título del capítulo {num_capitulos}]
+        """
+        
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Genera {num_capitulos} títulos de capítulos para el libro '{titulo_libro}'. Cada título debe estar en una línea nueva.",
-            "max_tokens": 2048,
+            "prompt": prompt,
+            "max_tokens": 1024,
             "temperature": 0.7,
-            "top_p": 0.7,
+            "top_p": 0.9,
             "top_k": 50,
-            "repetition_penalty": 1,
+            "repetition_penalty": 1.1
         })
         headers = {
             'Authorization': f'Bearer {TOGETHER_API_KEY}',
             'Content-Type': 'application/json'
         }
         response = requests.post(url, headers=headers, data=payload)
-        capitulos = response.json()['output']['choices'][0]['text'].strip().split('\n')
-        return [capitulo.strip() for capitulo in capitulos if capitulo.strip()]
+        return response.json()['output']['choices'][0]['text'].strip().split('\n')
 
-    def generar_descripcion_capitulo(capitulo):
+    def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_capitulo):
         url = "https://api.together.xyz/inference"
+        prompt = f"""
+        Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
+        del libro de no ficción "{titulo_libro}" en el género de {genero}.
+        El contenido debe ser informativo, bien estructurado y relevante para el tema del libro.
+        Incluye subtítulos, ejemplos y explicaciones detalladas.
+        """
+        
         payload = json.dumps({
             "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": f"Proporciona una descripción breve del capítulo '{capitulo}'. No incluyas ejemplos ni detalles técnicos.",
-            "max_tokens": 1024,
+            "prompt": prompt,
+            "max_tokens": 4096,
             "temperature": 0.7,
-            "top_p": 0.7,
+            "top_p": 0.9,
             "top_k": 50,
-            "repetition_penalty": 1,
+            "repetition_penalty": 1.1
         })
         headers = {
             'Authorization': f'Bearer {TOGETHER_API_KEY}',
@@ -77,86 +114,54 @@ with col2:
         response = requests.post(url, headers=headers, data=payload)
         return response.json()['output']['choices'][0]['text'].strip()
 
-    def buscar_citas_relevantes(titulo_libro, num_citas):
-        url = f"https://api.serply.io/v1/scholar/q={titulo_libro}"
-        headers = {
-            'X-Api-Key': SERPLY_API_KEY,
-            'Content-Type': 'application/json',
-            'X-Proxy-Location': 'US',
-            'X-User-Agent': 'Mozilla/5.0'
-        }
-        response = requests.get(url, headers=headers)
-        citas = response.json().get("results", [])[:num_citas]
-        return [formatear_referencia_apa(cita) for cita in citas]
+    if st.button("Generar capítulos"):
+        if titulo_libro and genero:
+            with st.spinner("Generando capítulos..."):
+                capitulos = generar_capitulos(titulo_libro, genero, num_capitulos)
+                st.session_state.capitulos = capitulos
+                st.success("Capítulos generados con éxito.")
+        else:
+            st.warning("Por favor, ingrese el título del libro y seleccione un género.")
 
-    def formatear_referencia_apa(ref):
-        authors = ref.get('author', 'Autor desconocido')
-        year = ref.get('year', 's.f.')
-        title = ref.get('title', 'Título desconocido')
-        journal = ref.get('journal', '')
-        volume = ref.get('volume', '')
-        issue = ref.get('issue', '')
-        pages = ref.get('pages', '')
-        url = ref.get('url', '')
+    if 'capitulos' in st.session_state:
+        st.subheader("Capítulos generados:")
+        capitulos_editados = []
+        for i, capitulo in enumerate(st.session_state.capitulos):
+            capitulo_editado = st.text_input(f"Capítulo {i+1}", value=capitulo)
+            capitulos_editados.append(capitulo_editado)
+        st.session_state.capitulos_editados = capitulos_editados
 
-        reference = f"{authors} ({year}). {title}."
-        if journal:
-            reference += f" {journal}"
-            if volume:
-                reference += f", {volume}"
-                if issue:
-                    reference += f"({issue})"
-            if pages:
-                reference += f", {pages}"
-        reference += f". {url}"
-        
-        return reference
+    if 'capitulos_editados' in st.session_state:
+        if st.button("Generar contenido de capítulos"):
+            with st.spinner("Generando contenido de capítulos..."):
+                contenido_capitulos = []
+                for i, titulo_capitulo in enumerate(st.session_state.capitulos_editados):
+                    contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, i+1)
+                    contenido_capitulos.append(contenido)
+                st.session_state.contenido_capitulos = contenido_capitulos
+                st.success("Contenido de capítulos generado con éxito.")
 
-    # Interfaz de usuario
-    titulo_libro = st.text_input("Ingresa el título del libro:")
+        if 'contenido_capitulos' in st.session_state:
+            def create_docx(titulo, genero, capitulos, contenido):
+                doc = Document()
+                doc.add_heading(titulo, 0)
+                doc.add_paragraph(f"Género: {genero}")
 
-    num_capitulos = st.selectbox("Selecciona el número de capítulos:", [5, 10, 15])
+                for i, (capitulo, contenido) in enumerate(zip(capitulos, contenido)):
+                    doc.add_heading(f"Capítulo {i+1}: {capitulo}", level=1)
+                    doc.add_paragraph(contenido)
 
-    audiencia = st.selectbox("Selecciona la audiencia objetivo:", ["Estudiantes", "Profesionales", "Investigadores"])
+                doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.')
 
-    observaciones = st.text_area("Agrega observaciones adicionales (opcional):")
+                return doc
 
-    if st.button("Generar contenido del libro"):
-        with st.spinner("Generando contenido del libro..."):
-            capitulos = generar_capitulos(titulo_libro, num_capitulos)
-            descripciones_capitulos = {capitulo: generar_descripcion_capitulo(capitulo) for capitulo in capitulos}
-            citas_relevantes = buscar_citas_relevantes(titulo_libro, 10)
-
-            # Mostrar resultados
-            st.subheader("Capítulos generados:")
-            for capitulo, descripcion in descripciones_capitulos.items():
-                st.markdown(f"**{capitulo}**: {descripcion}")
-
-            st.subheader("Citas relevantes:")
-            for cita in citas_relevantes:
-                st.markdown(f"- {cita}")
-
-            # Botón para descargar el documento
-            doc = Document()
-            doc.add_heading(f"{titulo_libro}", 0)
-
-            # Capítulos
-            doc.add_heading("Capítulos", level=1)
-            for capitulo, descripcion in descripciones_capitulos.items():
-                doc.add_paragraph(f"{capitulo}: {descripcion}")
-
-            # Citas
-            doc.add_page_break()
-            doc.add_heading("Citas relevantes", level=1)
-            for cita in citas_relevantes:
-                doc.add_paragraph(cita, style='List Bullet')
-
+            doc = create_docx(titulo_libro, genero, st.session_state.capitulos_editados, st.session_state.contenido_capitulos)
             buffer = BytesIO()
             doc.save(buffer)
             buffer.seek(0)
             st.download_button(
-                label="Descargar contenido del libro en DOCX",
+                label="Descargar libro en DOCX",
                 data=buffer,
-                file_name=f"Contenido_{titulo_libro.replace(' ', '_')}.docx",
+                file_name=f"{titulo_libro.replace(' ', '_')}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
