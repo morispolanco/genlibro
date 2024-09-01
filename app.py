@@ -17,7 +17,6 @@ st.write("Ingrese los detalles del libro:")
 titulo_libro = st.text_input("Título del libro:")
 num_capitulos = st.number_input("Número de capítulos:", min_value=1, max_value=15, value=10)
 audiencia = st.selectbox("Audiencia:", ["Principiantes", "Conocedores", "Expertos"])
-subdivisiones = st.selectbox("Número de subdivisiones por capítulo:", [0, 1, 2])
 instrucciones_adicionales = st.text_area("Instrucciones adicionales", placeholder="Ingrese cualquier instrucción adicional para la generación del contenido")
 
 # Secret key for API
@@ -54,13 +53,12 @@ def generar_tabla_contenido(titulo, num_capitulos, audiencia, instrucciones_adic
     response = requests.post(url, headers=headers, data=payload)
     return response.json()['output']['choices'][0]['text'].strip().split('\n')
 
-def generar_contenido_capitulo(titulo_libro, titulo_capitulo, numero_capitulo, audiencia, subdivisiones, instrucciones_adicionales):
+def generar_contenido_capitulo(titulo_libro, titulo_capitulo, numero_capitulo, audiencia, instrucciones_adicionales):
     url = "https://api.together.xyz/inference"
     prompt = f"""
     Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
     del libro de no ficción "{titulo_libro}".
-    El contenido debe ser adecuado para una audiencia {audiencia}, 
-    y estructurarse en {subdivisiones} subdivisiones si es posible.
+    El contenido debe ser adecuado para una audiencia {audiencia}.
     {instrucciones_adicionales}
     No repitas el título del capítulo al inicio del contenido.
     Comienza directamente con el contenido del capítulo.
@@ -101,7 +99,7 @@ if 'tabla_contenido_editada' in st.session_state:
         with st.spinner("Generando contenido de capítulos..."):
             contenido_capitulos = []
             for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
-                contenido = generar_contenido_capitulo(titulo_libro, titulo_capitulo.split(": ", 1)[1], i+1, audiencia, subdivisiones, instrucciones_adicionales)
+                contenido = generar_contenido_capitulo(titulo_libro, titulo_capitulo.split(": ", 1)[1], i+1, audiencia, instrucciones_adicionales)
                 contenido_capitulos.append(contenido)
             st.session_state.contenido_capitulos = contenido_capitulos
             st.success("Contenido de capítulos generado con éxito.")
