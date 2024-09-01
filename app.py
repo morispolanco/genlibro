@@ -87,98 +87,45 @@ with col2:
         response = requests.post(url, headers=headers, data=payload)
         return response.json()['output']['choices'][0]['text'].strip()
 
-    def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_capitulo):
-        url = "https://api.together.xyz/inference"
-        prompt = f"""
-        Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
-        del libro de no ficción "{titulo_libro}" en el género de {genero}.
-        El contenido debe ser informativo, bien estructurado y relevante para el tema del libro.
-        Incluye subtítulos, ejemplos y explicaciones detalladas.
-        No repitas el título del capítulo al inicio del contenido.
-        Comienza directamente con el contenido del capítulo.
-        """
-        
-        payload = json.dumps({
-            "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
-            "prompt": prompt,
-            "max_tokens": 4096,
-            "temperature": 0.7,
-            "top_p": 0.9,
-            "top_k": 50,
-            "repetition_penalty": 1.1
-        })
-        headers = {
-            'Authorization': f'Bearer {TOGETHER_API_KEY}',
-            'Content-Type': 'application/json'
-        }
-        response = requests.post(url, headers=headers, data=payload)
-        return response.json()['output']['choices'][0]['text'].strip()
+# Ajuste en el código para evitar errores al dividir títulos de capítulos
+def generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo, numero_capitulo):
+    url = "https://api.together.xyz/inference"
+    prompt = f"""
+    Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
+    del libro de no ficción "{titulo_libro}" en el género de {genero}.
+    El contenido debe ser informativo, bien estructurado y relevante para el tema del libro.
+    Incluye subtítulos, ejemplos y explicaciones detalladas.
+    No repitas el título del capítulo al inicio del contenido.
+    Comienza directamente con el contenido del capítulo.
+    """
+    
+    payload = json.dumps({
+        "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "prompt": prompt,
+        "max_tokens": 4096,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.1
+    })
+    headers = {
+        'Authorization': f'Bearer {TOGETHER_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    response = requests.post(url, headers=headers, data=payload)
+    return response.json()['output']['choices'][0]['text'].strip()
 
-    if st.button("Generar tabla de contenido"):
-        if titulo_libro and genero:
-            with st.spinner("Generando tabla de contenido..."):
-                tabla_contenido = generar_tabla_contenido(titulo_libro, genero, num_capitulos)
-                st.session_state.tabla_contenido = tabla_contenido
-                st.success("Tabla de contenido generada con éxito.")
-        else:
-            st.warning("Por favor, ingrese el título del libro y seleccione un género.")
-
-    if 'tabla_contenido' in st.session_state:
-        st.subheader("Tabla de contenido generada:")
-        tabla_contenido_editada = st.text_area("Edite la tabla de contenido:", value=st.session_state.tabla_contenido, height=200)
-        st.session_state.tabla_contenido_editada = tabla_contenido_editada.split('\n')
-
-    if 'tabla_contenido_editada' in st.session_state:
-        if st.button("Generar contenido de capítulos"):
-            with st.spinner("Generando contenido de capítulos..."):
-                contenido_capitulos = []
-                for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
-                    contenido = generar_contenido_capitulo(titulo_libro, genero, titulo_capitulo.split(": ", 1)[1], i+1)
-                    contenido_capitulos.append(contenido)
-                st.session_state.contenido_capitulos = contenido_capitulos
-                st.success("Contenido de capítulos generado con éxito.")
-
-        if 'contenido_capitulos' in st.session_state:
-            def create_docx(titulo, genero, tabla_contenido, contenido):
-                doc = Document()
-                
-                # Crear estilos sin sangría y justificación completa
-                styles = doc.styles
-                style = styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
-                style.font.name = 'Calibri'
-                style.font.size = Pt(11)
-                style.paragraph_format.space_after = Pt(10)
-                style.paragraph_format.first_line_indent = Pt(0)
-                
-                doc.add_heading(titulo, 0)
-                doc.add_paragraph(f"Género: {genero}", style='Sin Sangría')
-
-                # Agregar tabla de contenido
-                doc.add_heading("Tabla de Contenido", level=1)
-                for capitulo in tabla_contenido:
-                    doc.add_paragraph(capitulo, style='Sin Sangría')
-
-                # Agregar contenido de los capítulos
-                for i, (capitulo, contenido) in enumerate(zip(tabla_contenido, contenido)):
-                    doc.add_page_break()
-                    doc.add_heading(capitulo, level=1)
-                    paragraphs = contenido.split('\n')
-                    for para in paragraphs:
-                        if para.strip():
-                            p = doc.add_paragraph(para.strip(), style='Sin Sangría')
-                            p.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY  # Justificación completa
-
-                doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
-
-                return doc
-
-            doc = create_docx(titulo_libro, genero, st.session_state.tabla_contenido_editada, st.session_state.contenido_capitulos)
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-            st.download_button(
-                label="Descargar libro en DOCX",
-                data=buffer,
-                file_name=f"{titulo_libro.replace(' ', '_')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+if 'tabla_contenido_editada' in st.session_state:
+    if st.button("Generar contenido de capítulos"):
+        with st.spinner("Generando contenido de capítulos..."):
+            contenido_capitulos = []
+            for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
+                # Asegurar que el título del capítulo tiene el formato esperado
+                partes_titulo = titulo_capitulo.split(": ", 1)
+                if len(partes_titulo) > 1:
+                    contenido = generar_contenido_capitulo(titulo_libro, genero, partes_titulo[1], i+1)
+                else:
+                    contenido = generar_contenido_capitulo(titulo_libro, genero, partes_titulo[0], i+1)
+                contenido_capitulos.append(contenido)
+            st.session_state.contenido_capitulos = contenido_capitulos
+            st.success("Contenido de capítulos generado con éxito.")
