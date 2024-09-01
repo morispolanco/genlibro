@@ -127,8 +127,12 @@ if 'tabla_contenido_editada' in st.session_state:
 
             # Add chapter contents
             for i, capitulo in enumerate(contenido):
+                if i < len(tabla_contenido):
+                    chapter_title = tabla_contenido[i].split(": ", 1)[1]
+                else:
+                    chapter_title = f"Capítulo {i+1}"
                 doc.add_page_break()
-                doc.add_heading(f"Capítulo {i+1}: {tabla_contenido[i].split(': ', 1)[1]}", level=2)
+                doc.add_heading(f"Capítulo {i+1}: {chapter_title}", level=2)
                 doc.add_paragraph(capitulo, style='Sin Sangría')
 
             doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
