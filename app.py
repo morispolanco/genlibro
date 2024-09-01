@@ -118,7 +118,7 @@ if 'tabla_contenido_editada' in st.session_state:
                 style.font.size = Pt(11)
                 style.paragraph_format.space_after = Pt(10)
                 style.paragraph_format.first_line_indent = Pt(0)
-            except:
+            except KeyError:
                 # Style might already exist
                 style = doc.styles['Sin Sangría']
 
@@ -158,4 +158,3 @@ if 'tabla_contenido_editada' in st.session_state:
             file_name=f"{titulo_libro}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-    
