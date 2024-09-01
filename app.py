@@ -98,7 +98,11 @@ if 'tabla_contenido_editada' in st.session_state:
         with st.spinner("Generando contenido de capítulos..."):
             contenido_capitulos = []
             for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
-                contenido = generar_contenido_capitulo(titulo_libro, titulo_capitulo.split(": ", 1)[1], i+1, audiencia, instrucciones_adicionales)
+                if ": " in titulo_capitulo:
+                    capitulo_titulo = titulo_capitulo.split(": ", 1)[1]
+                else:
+                    capitulo_titulo = titulo_capitulo  # Fallback in case the format is different
+                contenido = generar_contenido_capitulo(titulo_libro, capitulo_titulo, i+1, audiencia, instrucciones_adicionales)
                 contenido_capitulos.append(contenido)
             st.session_state.contenido_capitulos = contenido_capitulos
             st.success("Contenido de capítulos generado con éxito.")
@@ -114,7 +118,7 @@ if 'tabla_contenido_editada' in st.session_state:
                 style.font.size = Pt(11)
                 style.paragraph_format.space_after = Pt(10)
                 style.paragraph_format.first_line_indent = Pt(0)
-            except KeyError:
+            except:
                 # Style might already exist
                 style = doc.styles['Sin Sangría']
 
@@ -127,9 +131,12 @@ if 'tabla_contenido_editada' in st.session_state:
 
             # Add chapter contents
             for i, capitulo in enumerate(contenido):
-                try:
-                    chapter_title = tabla_contenido[i].split(": ", 1)[1]
-                except IndexError:
+                if i < len(tabla_contenido):
+                    try:
+                        chapter_title = tabla_contenido[i].split(": ", 1)[1]
+                    except IndexError:
+                        chapter_title = f"Capítulo {i+1}"
+                else:
                     chapter_title = f"Capítulo {i+1}"
                 doc.add_page_break()
                 doc.add_heading(f"Capítulo {i+1}: {chapter_title}", level=2)
@@ -151,3 +158,4 @@ if 'tabla_contenido_editada' in st.session_state:
             file_name=f"{titulo_libro}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
+    
