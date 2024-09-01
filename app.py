@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx.shared import Pt
 from io import BytesIO
 
@@ -106,13 +107,16 @@ if 'tabla_contenido_editada' in st.session_state:
         def create_docx(titulo, tabla_contenido, contenido):
             doc = Document()
 
-            # Create styles without indentation
-            styles = doc.styles
-            style = styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
-            style.font.name = 'Calibri'
-            style.font.size = Pt(11)
-            style.paragraph_format.space_after = Pt(10)
-            style.paragraph_format.first_line_indent = Pt(0)
+            # Check if the style already exists, and add it if not
+            try:
+                style = doc.styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
+                style.font.name = 'Calibri'
+                style.font.size = Pt(11)
+                style.paragraph_format.space_after = Pt(10)
+                style.paragraph_format.first_line_indent = Pt(0)
+            except:
+                # Style might already exist
+                style = doc.styles['Sin Sangría']
 
             doc.add_heading(titulo, 0)
 
