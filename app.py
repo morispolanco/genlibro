@@ -1,170 +1,77 @@
 import streamlit as st
 import requests
-import json
-from docx import Document
-from docx.enum.style import WD_STYLE_TYPE
-from docx.shared import Pt
-from io import BytesIO
+from together import Together
+from serper import Serper
 
-# Set page configuration
-st.set_page_config(page_title="Generador de Libros de No Ficción", page_icon="📚")
+# Obtener las claves de API de los secretos de Streamlit
+together_api_key = st.secrets["TOGETHER_API_KEY"]
+serper_api_key = st.secrets["SERPER_API_KEY"]
 
-# Titles and Main Column
-st.title("Generador de Libros de No Ficción")
+# Configurar las APIs usando las claves seguras
+together = Together(together_api_key)
+serper = Serper(serper_api_key)
 
-st.write("Ingrese los detalles del libro:")
-titulo_libro = st.text_input("Título del libro:")
-num_capitulos = st.number_input("Número de capítulos:", min_value=1, max_value=15, value=10)
-audiencia = st.selectbox("Audiencia:", ["Principiantes", "Conocedores", "Expertos"])
-instrucciones_adicionales = st.text_area("Instrucciones adicionales", placeholder="Ingrese cualquier instrucción adicional para la generación del contenido")
+st.title("Asistente para Escritores de No Ficción")
 
-# Secret key for API
-TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
+# Sección de Investigación y Síntesis
+st.header("Investigación y Síntesis")
+topic = st.text_input("Ingresa el tema principal de tu libro:")
+subtopic = st.text_input("Ingresa un subtema específico (opcional):")
 
-def generar_tabla_contenido(titulo, num_capitulos, audiencia, instrucciones_adicionales):
-    url = "https://api.together.xyz/inference"
-    prompt = f"""
-    Genera una tabla de contenido limpia para un libro de no ficción titulado "{titulo}".
-    El libro está dirigido a una audiencia {audiencia}.
-    La tabla de contenido debe tener {num_capitulos} capítulos.
-    Los títulos de los capítulos deben ser coherentes, atractivos y relevantes para el tema del libro, sin repeticiones.
-    {instrucciones_adicionales}
-    Formato de salida:
-    Capítulo 1: [Título del capítulo 1]
-    Capítulo 2: [Título del capítulo 2]
-    ...
-    Capítulo {num_capitulos}: [Título del capítulo {num_capitulos}]
-    """
+if st.button("Investigar"):
+    search_query = f"{topic} {subtopic}".strip()
+    search_results = serper.search(search_query)
+    
+    prompt = f"Analiza y sintetiza la siguiente información sobre '{search_query}' para un libro de no ficción: {search_results}. Proporciona un resumen conciso y bien estructurado, destacando los puntos clave, datos relevantes y cualquier controversia o debate actual sobre el tema."
+    research_summary = together.complete(prompt)
+    
+    st.subheader("Resumen de Investigación")
+    st.write(research_summary)
 
-    payload = json.dumps({
-        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-        "prompt": prompt,
-        "max_tokens": 1024,
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "top_k": 50,
-        "repetition_penalty": 1.1
-    })
-    headers = {
-        'Authorization': f'Bearer {TOGETHER_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers, data=payload)
-    return response.json()['output']['choices'][0]['text'].strip().split('\n')
+# Sección de Estructura del Libro
+st.header("Estructura del Libro")
+book_concept = st.text_area("Describe brevemente el concepto principal de tu libro:")
 
-def generar_contenido_capitulo(titulo_libro, titulo_capitulo, numero_capitulo, audiencia, instrucciones_adicionales):
-    url = "https://api.together.xyz/inference"
-    prompt = f"""
-    Escribe el contenido detallado para el capítulo {numero_capitulo} titulado "{titulo_capitulo}" 
-    del libro de no ficción "{titulo_libro}".
-    El contenido debe ser adecuado para una audiencia {audiencia}.
-    {instrucciones_adicionales}
-    No repitas el título del capítulo al inicio del contenido.
-    Comienza directamente con el contenido del capítulo.
-    """
+if st.button("Generar Estructura"):
+    prompt = f"Basándote en el siguiente concepto de libro de no ficción: '{book_concept}', sugiere una estructura detallada para el libro. Incluye una propuesta de tabla de contenidos con capítulos y subcapítulos, así como una breve descripción del enfoque de cada sección principal."
+    book_structure = together.complete(prompt)
+    st.write(book_structure)
 
-    payload = json.dumps({
-        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-        "prompt": prompt,
-        "max_tokens": 4096,
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "top_k": 50,
-        "repetition_penalty": 1.1
-    })
-    headers = {
-        'Authorization': f'Bearer {TOGETHER_API_KEY}',
-        'Content-Type': 'application/json'
-    }
-    response = requests.post(url, headers=headers, data=payload)
-    return response.json()['output']['choices'][0]['text'].strip()
+# Sección de Generación de Ideas para Capítulos
+st.header("Ideas para Capítulos")
+chapter_topic = st.text_input("Ingresa el tema del capítulo:")
 
-def clean_text(text):
-    """
-    Cleans the text to replace Markdown-like symbols with proper formatting.
-    """
-    # Replace Markdown-like bold (**text**) with bold for Word
-    text = text.replace("**", "")
+if st.button("Generar Ideas"):
+    prompt = f"Proporciona 5 ideas interesantes y únicas para desarrollar el capítulo sobre '{chapter_topic}' en un libro de no ficción. Incluye posibles ángulos, ejemplos o casos de estudio que podrían explorarse, y preguntas provocativas que el capítulo podría abordar."
+    chapter_ideas = together.complete(prompt)
+    st.write(chapter_ideas)
 
-    # We could add more replacements if needed for other Markdown symbols
+# Sección de Verificación de Hechos
+st.header("Verificación de Hechos")
+fact_to_check = st.text_area("Ingresa el hecho o afirmación a verificar:")
 
-    return text
+if st.button("Verificar"):
+    search_results = serper.search(fact_to_check)
+    
+    prompt = f"Verifica la siguiente afirmación: '{fact_to_check}'. Basándote en la información encontrada: {search_results}, proporciona un análisis de la veracidad de la afirmación, citando fuentes confiables cuando sea posible. Si hay discrepancias o debates, menciónalos."
+    fact_check_result = together.complete(prompt)
+    st.write(fact_check_result)
 
-if st.button("Generar tabla de contenido"):
-    if titulo_libro:
-        with st.spinner("Generando tabla de contenido..."):
-            tabla_contenido = generar_tabla_contenido(titulo_libro, num_capitulos, audiencia, instrucciones_adicionales)
-            st.session_state.tabla_contenido = tabla_contenido
-            st.success("Tabla de contenido generada con éxito.")
-    else:
-        st.warning("Por favor, ingrese el título del libro.")
+# Sección de Estilo y Tono
+st.header("Análisis de Estilo y Tono")
+sample_text = st.text_area("Pega un fragmento de tu escritura para análisis:")
 
-if 'tabla_contenido' in st.session_state:
-    st.subheader("Tabla de contenido generada:")
-    tabla_contenido_editada = st.text_area("Edite los títulos de los capítulos si es necesario:", value="\n".join(st.session_state.tabla_contenido), height=400)
-    st.session_state.tabla_contenido_editada = tabla_contenido_editada.strip().split('\n')
+if st.button("Analizar Estilo"):
+    prompt = f"Analiza el siguiente fragmento de un libro de no ficción en términos de estilo y tono:\n\n{sample_text}\n\nProporciona retroalimentación sobre la claridad, el compromiso del lector, el nivel de tecnicidad y la adecuación para el público objetivo. Sugiere formas de mejorar la accesibilidad y el impacto del texto."
+    style_analysis = together.complete(prompt)
+    st.write(style_analysis)
 
-if 'tabla_contenido_editada' in st.session_state:
-    if st.button("Generar contenido de capítulos"):
-        with st.spinner("Generando contenido de capítulos..."):
-            contenido_capitulos = []
-            for i, titulo_capitulo in enumerate(st.session_state.tabla_contenido_editada):
-                if ": " in titulo_capitulo:
-                    capitulo_titulo = titulo_capitulo.split(": ", 1)[1]
-                else:
-                    capitulo_titulo = titulo_capitulo  # Fallback in case the format is different
-                contenido = generar_contenido_capitulo(titulo_libro, capitulo_titulo, i+1, audiencia, instrucciones_adicionales)
-                contenido_cleaned = clean_text(contenido)
-                contenido_capitulos.append(contenido_cleaned)
-            st.session_state.contenido_capitulos = contenido_capitulos
-            st.success("Contenido de capítulos generado con éxito.")
+# Sección de Bibliografía y Citas
+st.header("Asistente de Bibliografía")
+source_info = st.text_area("Ingresa la información de la fuente (título, autor, año, URL, etc.):")
+citation_style = st.selectbox("Estilo de citación:", ["APA", "MLA", "Chicago"])
 
-    if 'contenido_capitulos' in st.session_state:
-        def create_docx(titulo, tabla_contenido, contenido):
-            doc = Document()
-
-            try:
-                style = doc.styles.add_style('Sin Sangría', WD_STYLE_TYPE.PARAGRAPH)
-                style.font.name = 'Calibri'
-                style.font.size = Pt(11)
-                style.paragraph_format.left_indent = Pt(0)
-            except KeyError:
-                # Style might already exist
-                style = doc.styles['Sin Sangría']
-
-            doc.add_heading(titulo, 0)
-
-            # Add table of contents
-            doc.add_heading("Tabla de Contenido", level=1)
-            for capitulo in tabla_contenido:
-                doc.add_paragraph(clean_text(capitulo), style='Sin Sangría')
-
-            # Add chapter contents
-            for i, capitulo_contenido in enumerate(contenido):
-                if i < len(tabla_contenido):
-                    try:
-                        chapter_title = tabla_contenido[i].split(": ", 1)[1]
-                    except IndexError:
-                        chapter_title = f"Capítulo {i+1}"
-                else:
-                    chapter_title = f"Capítulo {i+1}"
-                doc.add_page_break()
-                doc.add_heading(f"Capítulo {i+1}: {chapter_title}", level=2)
-                doc.add_paragraph(capitulo_contenido, style='Sin Sangría')
-
-            doc.add_paragraph('\nNota: Este libro fue generado por un asistente de IA. Se recomienda revisar y editar el contenido para garantizar precisión y calidad.', style='Sin Sangría')
-
-            return doc
-
-        doc = create_docx(titulo_libro, st.session_state.tabla_contenido_editada, st.session_state.contenido_capitulos)
-
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
-
-        st.download_button(
-            label="Descargar libro en DOCX",
-            data=buffer,
-            file_name=f"{titulo_libro}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
+if st.button("Generar Cita"):
+    prompt = f"Genera una cita bibliográfica en estilo {citation_style} para la siguiente fuente:\n\n{source_info}"
+    citation = together.complete(prompt)
+    st.write(citation)
