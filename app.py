@@ -45,60 +45,47 @@ def serper_search(query):
     else:
         return f"Error: {response.status_code}, {response.text}"
 
-st.title("Asistente para Escritores de No Ficción")
+st.title("Asistente para Generación de Tesis Jurídicas")
 
-# Sección de Investigación y Síntesis
-st.header("Investigación y Síntesis")
-topic = st.text_input("Ingresa el tema principal de tu libro:")
-subtopic = st.text_input("Ingresa un subtema específico (opcional):")
+# Sección de Investigación y Generación de Tesis
+st.header("Generación de Tesis")
+thesis_topic = st.text_input("Ingresa el tema de tu tesis de derecho:")
 
-if st.button("Investigar"):
-    search_query = f"{topic} {subtopic}".strip()
-    search_results = serper_search(search_query)
+if st.button("Generar Tesis"):
+    prompt = f"Proporciona una tesis circunscrita al ámbito legal guatemalteco sobre el siguiente tema: '{thesis_topic}'. La tesis debe ser una proposición que se debe probar, con un enfoque en el derecho guatemalteco."
+    thesis_statement = together_complete(prompt)
     
-    prompt = f"Analiza y sintetiza la siguiente información sobre '{search_query}' para un libro de no ficción: {search_results}. Proporciona un resumen conciso y bien estructurado, destacando los puntos clave, datos relevantes y cualquier controversia o debate actual sobre el tema."
-    research_summary = together_complete(prompt)
-    
-    st.subheader("Resumen de Investigación")
-    st.write(research_summary)
+    st.subheader("Tesis Propuesta")
+    st.write(thesis_statement)
 
-# Sección de Estructura del Libro
-st.header("Estructura del Libro")
-book_concept = st.text_area("Describe brevemente el concepto principal de tu libro:")
+# Sección de Estructura de la Tesis
+st.header("Estructura de la Tesis")
+thesis_concept = st.text_area("Describe brevemente el concepto central de tu tesis:")
 
 if st.button("Generar Estructura"):
-    prompt = f"Basándote en el siguiente concepto de libro de no ficción: '{book_concept}', sugiere una estructura detallada para el libro. Incluye una propuesta de tabla de contenidos con capítulos y subcapítulos, así como una breve descripción del enfoque de cada sección principal."
-    book_structure = together_complete(prompt)
-    st.write(book_structure)
+    prompt = f"Basándote en el siguiente concepto de tesis de derecho: '{thesis_concept}', sugiere una estructura detallada para la tesis circunscrita al derecho guatemalteco. Incluye una propuesta de tabla de contenidos con introducción, siete capítulos y una lista de referencias, enfocándote en aspectos jurídicos clave."
+    thesis_structure = together_complete(prompt)
+    st.write(thesis_structure)
 
 # Sección de Generación de Ideas para Capítulos
 st.header("Ideas para Capítulos")
-chapter_topic = st.text_input("Ingresa el tema del capítulo:")
+chapter_topic = st.text_input("Ingresa el tema del capítulo dentro de la tesis:")
 
 if st.button("Generar Ideas"):
-    prompt = f"Proporciona 5 ideas interesantes y únicas para desarrollar el capítulo sobre '{chapter_topic}' en un libro de no ficción. Incluye posibles ángulos, ejemplos o casos de estudio que podrían explorarse, y preguntas provocativas que el capítulo podría abordar."
+    prompt = f"Proporciona 5 ideas para desarrollar el capítulo sobre '{chapter_topic}' en una tesis de derecho en el ámbito guatemalteco. Incluye posibles leyes, precedentes o casos de estudio relevantes, y preguntas legales importantes que el capítulo podría abordar."
     chapter_ideas = together_complete(prompt)
     st.write(chapter_ideas)
 
-# Sección de Verificación de Hechos
-st.header("Verificación de Hechos")
-fact_to_check = st.text_area("Ingresa el hecho o afirmación a verificar:")
+# Sección de Verificación de Fuentes Jurídicas
+st.header("Verificación de Fuentes Jurídicas")
+legal_fact_to_check = st.text_area("Ingresa el hecho o norma jurídica a verificar:")
 
 if st.button("Verificar"):
-    search_results = serper_search(fact_to_check)
+    search_results = serper_search(legal_fact_to_check)
     
-    prompt = f"Verifica la siguiente afirmación: '{fact_to_check}'. Basándote en la información encontrada: {search_results}, proporciona un análisis de la veracidad de la afirmación, citando fuentes confiables cuando sea posible. Si hay discrepancias o debates, menciónalos."
-    fact_check_result = together_complete(prompt)
-    st.write(fact_check_result)
-
-# Sección de Estilo y Tono
-st.header("Análisis de Estilo y Tono")
-sample_text = st.text_area("Pega un fragmento de tu escritura para análisis:")
-
-if st.button("Analizar Estilo"):
-    prompt = f"Analiza el siguiente fragmento de un libro de no ficción en términos de estilo y tono:\n\n{sample_text}\n\nProporciona retroalimentación sobre la claridad, el compromiso del lector, el nivel de tecnicidad y la adecuación para el público objetivo. Sugiere formas de mejorar la accesibilidad y el impacto del texto."
-    style_analysis = together_complete(prompt)
-    st.write(style_analysis)
+    prompt = f"Verifica la siguiente afirmación o norma jurídica: '{legal_fact_to_check}'. Basándote en la información encontrada: {search_results}, proporciona un análisis de su veracidad y relevancia en el derecho guatemalteco, citando fuentes legales cuando sea posible."
+    legal_fact_check_result = together_complete(prompt)
+    st.write(legal_fact_check_result)
 
 # Sección de Bibliografía y Citas
 st.header("Asistente de Bibliografía")
@@ -106,6 +93,6 @@ source_info = st.text_area("Ingresa la información de la fuente (título, autor
 citation_style = st.selectbox("Estilo de citación:", ["APA", "MLA", "Chicago"])
 
 if st.button("Generar Cita"):
-    prompt = f"Genera una cita bibliográfica en estilo {citation_style} para la siguiente fuente:\n\n{source_info}"
+    prompt = f"Genera una cita bibliográfica en estilo {citation_style} para la siguiente fuente jurídica:\n\n{source_info}"
     citation = together_complete(prompt)
     st.write(citation)
