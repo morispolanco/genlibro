@@ -61,7 +61,7 @@ if st.button("Generar Tesis"):
     
     # Generar la estructura automáticamente basada en la tesis
     st.subheader("Estructura Propuesta")
-    prompt_structure = f"Con base en la siguiente tesis: '{thesis_statement}', propone una tabla de contenidos detallada para una tesis jurídica circunscrita al ámbito legal guatemalteco. Incluye una introducción, siete capítulos con títulos claros y relacionados con el desarrollo de la tesis, y una lista de referencias."
+    prompt_structure = f"Con base en la siguiente tesis: '{thesis_statement}', propone una tabla de contenidos detallada para una tesis jurídica circunscrita al ámbito legal guatemalteco. Incluye una introducción y un número adecuado de capítulos (no fijo), con títulos claros y relacionados con el desarrollo de la tesis. Ajusta el número de capítulos según la complejidad de los temas tratados."
     thesis_structure = together_complete(prompt_structure)
     st.write(thesis_structure)
 
