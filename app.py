@@ -52,29 +52,18 @@ st.header("Generación de Tesis")
 thesis_topic = st.text_input("Ingresa el tema de tu tesis de derecho:")
 
 if st.button("Generar Tesis"):
+    # Generar la tesis
     prompt = f"Proporciona una tesis circunscrita al ámbito legal guatemalteco sobre el siguiente tema: '{thesis_topic}'. La tesis debe ser una proposición que se debe probar, con un enfoque en el derecho guatemalteco."
     thesis_statement = together_complete(prompt)
     
     st.subheader("Tesis Propuesta")
     st.write(thesis_statement)
-
-# Sección de Estructura de la Tesis
-st.header("Estructura de la Tesis")
-thesis_concept = st.text_area("Describe brevemente el concepto central de tu tesis:")
-
-if st.button("Generar Estructura"):
-    prompt = f"Basándote en el siguiente concepto de tesis de derecho: '{thesis_concept}', sugiere una estructura detallada para la tesis circunscrita al derecho guatemalteco. Incluye una propuesta de tabla de contenidos con introducción, siete capítulos y una lista de referencias, enfocándote en aspectos jurídicos clave."
-    thesis_structure = together_complete(prompt)
+    
+    # Generar la estructura automáticamente basada en la tesis
+    st.subheader("Estructura Propuesta")
+    prompt_structure = f"Con base en la siguiente tesis: '{thesis_statement}', propone una tabla de contenidos detallada para una tesis jurídica circunscrita al ámbito legal guatemalteco. Incluye una introducción, siete capítulos con títulos claros y relacionados con el desarrollo de la tesis, y una lista de referencias."
+    thesis_structure = together_complete(prompt_structure)
     st.write(thesis_structure)
-
-# Sección de Generación de Ideas para Capítulos
-st.header("Ideas para Capítulos")
-chapter_topic = st.text_input("Ingresa el tema del capítulo dentro de la tesis:")
-
-if st.button("Generar Ideas"):
-    prompt = f"Proporciona 5 ideas para desarrollar el capítulo sobre '{chapter_topic}' en una tesis de derecho en el ámbito guatemalteco. Incluye posibles leyes, precedentes o casos de estudio relevantes, y preguntas legales importantes que el capítulo podría abordar."
-    chapter_ideas = together_complete(prompt)
-    st.write(chapter_ideas)
 
 # Sección de Verificación de Fuentes Jurídicas
 st.header("Verificación de Fuentes Jurídicas")
