@@ -5,7 +5,6 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
-import textwrap
 
 # Obtener las claves de API de los secretos de Streamlit
 together_api_key = st.secrets["TOGETHER_API_KEY"]
@@ -24,7 +23,7 @@ def together_complete(prompt, max_tokens=500):
         "temperature": 0.7,
         "top_p": 0.7,
         "top_k": 50,
-        "repetition_penalty": 1.2,  # Aumentar la penalización por repeticiones
+        "repetition_penalty": 1.2,  # Penalización más alta para evitar repeticiones
         "stop": ["<|eot_id|>"]
     }
     response = requests.post(url, headers=headers, json=data)
@@ -51,13 +50,10 @@ def remove_repetitions(content):
 
 # Función para dividir el contenido en párrafos coherentes
 def format_paragraphs(content):
-    # Usamos textwrap para dividir el contenido en párrafos
-    paragraphs = content.split("\n")
-    formatted_paragraphs = []
-    for paragraph in paragraphs:
-        if len(paragraph.strip()) > 0:
-            formatted_paragraphs.append(textwrap.fill(paragraph, width=80))
-    return "\n\n".join(formatted_paragraphs)
+    # Dividir el contenido en párrafos manteniendo los saltos de línea
+    paragraphs = content.split("\n\n")  # Usamos doble salto de línea para separar párrafos
+    formatted_paragraphs = [para.strip() for para in paragraphs if para.strip()]
+    return formatted_paragraphs
 
 # Función para generar un capítulo de la novela con al menos 2400 palabras y diálogos con raya
 def generate_chapter(chapter_number, title, genre, audience):
@@ -72,9 +68,9 @@ def generate_chapter(chapter_number, title, genre, audience):
     
     # Remover repeticiones y dividir en párrafos coherentes
     content = remove_repetitions(content)
-    content = format_paragraphs(content)
+    paragraphs = format_paragraphs(content)
     
-    return content.strip()
+    return paragraphs
 
 # Función para generar el documento DOCX con la novela
 def generate_novel_docx(title, genre, audience, chapters):
@@ -98,8 +94,9 @@ def generate_novel_docx(title, genre, audience, chapters):
         chapter_title = f"Capítulo {i}"
         doc.add_heading(chapter_title, level=1)
         
-        # Cuerpo del capítulo
-        doc.add_paragraph(chapter)
+        # Cuerpo del capítulo con párrafos separados
+        for paragraph in chapter:
+            doc.add_paragraph(paragraph)
     
     # Guardar el documento en un buffer
     buffer = BytesIO()
@@ -124,7 +121,7 @@ def generate_all_chapters(title, genre, audience, num_chapters=20):
     
     return chapters
 
-st.title("Generación de Novela Larga con Capítulos Completos y Párrafos Bien Divididos")
+st.title("Generación de Novela Larga con Capítulos Completos y Párrafos Bien Separados")
 
 # Sección de generación de novela
 st.header("Generación de Novela")
