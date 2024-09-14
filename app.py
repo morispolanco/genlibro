@@ -36,7 +36,7 @@ def generate_chapter_content(chapter_title, min_pages=7):
     page_word_count = 350  # Aproximación de palabras por página
     min_word_count = page_word_count * min_pages  # Palabras mínimas por capítulo
     
-    prompt_content = f"Escribe un contenido extenso para el capítulo titulado '{chapter_title}' en una tesis de derecho guatemalteco. El contenido debe tener al menos {min_word_count} palabras, incluir análisis, casos prácticos y referencias legales."
+    prompt_content = f"Escribe un contenido extenso para el capítulo titulado '{chapter_title}' en un libro de introducción a la filosofía. El contenido debe tener al menos {min_word_count} palabras, incluyendo referencias a filósofos relevantes, corrientes filosóficas y ejemplos para facilitar la comprensión."
     
     # Dividir la generación de contenido en varias llamadas si es necesario
     content = ""
@@ -81,21 +81,21 @@ def generate_all_chapters_concurrently(thesis_structure):
     
     return thesis_content
 
-st.title("Generación Simultánea de Tesis Jurídica con Exportación a DOCX")
+st.title("Generación Simultánea de Libro de Introducción a la Filosofía con Exportación a DOCX")
 
-# Sección de Generación de Tesis
-st.header("Generación de Tesis")
-thesis_topic = st.text_input("Ingresa el tema de tu tesis de derecho:")
+# Sección de Generación de Libro
+st.header("Generación de Libro")
+book_topic = st.text_input("Ingresa el tema central de tu libro de filosofía:")
 
-if st.button("Generar Tesis y Estructura"):
-    # Generar la tesis
-    prompt_thesis = f"Proporciona una tesis circunscrita al ámbito legal guatemalteco sobre el siguiente tema: '{thesis_topic}'."
-    thesis_statement = together_complete(prompt_thesis)
-    st.subheader("Tesis Propuesta")
-    st.write(thesis_statement)
+if st.button("Generar Libro y Estructura"):
+    # Generar la introducción y estructura del libro
+    prompt_thesis = f"Proporciona un libro de introducción a la filosofía circunscrito al tema: '{book_topic}'."
+    book_statement = together_complete(prompt_thesis)
+    st.subheader("Propuesta del Libro")
+    st.write(book_statement)
     
-    # Generar la estructura automáticamente basada en la tesis
-    prompt_structure = f"Con base en la siguiente tesis: '{thesis_statement}', propone una tabla de contenidos detallada para una tesis jurídica circunscrita al ámbito legal guatemalteco. Incluye una introducción y un número adecuado de capítulos."
+    # Generar la estructura automáticamente basada en el tema
+    prompt_structure = f"Con base en el siguiente libro: '{book_statement}', propone una tabla de contenidos detallada para un libro de introducción a la filosofía. Incluye una introducción y un número adecuado de capítulos que cubran el tema de manera exhaustiva."
     structure_response = together_complete(prompt_structure)
     st.subheader("Estructura Propuesta")
     st.write(structure_response)
@@ -108,12 +108,12 @@ if st.button("Generar Tesis y Estructura"):
     thesis_content = generate_all_chapters_concurrently(thesis_structure)
     
     # Exportar a DOCX
-    doc_title = f"Tesis sobre {thesis_topic}"
+    doc_title = f"Introducción a la Filosofía: {book_topic}"
     docx_buffer = generate_docx(doc_title, thesis_structure, thesis_content)
     
     # Descargar el archivo DOCX
     st.download_button(
-        label="Descargar Tesis en DOCX",
+        label="Descargar Libro en DOCX",
         data=docx_buffer,
         file_name=f"{doc_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
