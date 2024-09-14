@@ -32,14 +32,18 @@ def together_complete(prompt, max_tokens=500):
     else:
         return f"Error: {response.status_code}, {response.text}"
 
-# Función para generar un capítulo de la novela
+# Función para generar un capítulo de la novela con al menos 2400 palabras y diálogos con raya
 def generate_chapter(chapter_number, title, genre, audience):
-    prompt = f"Escribe el capítulo {chapter_number} de una novela larga titulada '{title}', en el género de {genre}, para una audiencia de {audience}. El capítulo debe ser extenso, detallado y mantener la coherencia narrativa del libro."
+    word_count_goal = 2400
+    prompt = f"Escribe el capítulo {chapter_number} de una novela larga titulada '{title}', en el género de {genre}, para una audiencia de {audience}. El capítulo debe tener al menos {word_count_goal} palabras, incluir diálogos con raya (—) y ser coherente con la trama del libro."
     
-    # Generar el capítulo completo
-    chapter = together_complete(prompt, max_tokens=1000)  # Puedes ajustar max_tokens para capítulos más largos si es necesario
+    # Generar el capítulo en partes si es necesario para alcanzar la meta de palabras
+    content = ""
+    while len(content.split()) < word_count_goal:
+        new_content = together_complete(prompt, max_tokens=1000)
+        content += " " + new_content
     
-    return chapter
+    return content.strip()
 
 # Función para generar el documento DOCX con la novela
 def generate_novel_docx(title, genre, audience, chapters):
@@ -89,7 +93,7 @@ def generate_all_chapters(title, genre, audience, num_chapters=20):
     
     return chapters
 
-st.title("Generación de Novela Larga Basada en Título, Género y Audiencia")
+st.title("Generación de Novela Larga con Capítulos de al Menos 2400 Palabras y Diálogos con Raya")
 
 # Sección de generación de novela
 st.header("Generación de Novela")
