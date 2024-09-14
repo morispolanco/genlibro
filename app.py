@@ -3,6 +3,7 @@ import requests
 import json
 from docx import Document
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor
 
 # Obtener las claves de API de los secretos de Streamlit
 together_api_key = st.secrets["TOGETHER_API_KEY"]
@@ -61,7 +62,26 @@ def generate_docx(title, thesis_structure, thesis_content):
     buffer.seek(0)
     return buffer
 
-st.title("Generación de Tesis Jurídica con Contenido Extenso y Exportación a DOCX")
+# Función para generar contenido simultáneamente utilizando multithreading
+def generate_all_chapters_concurrently(thesis_structure):
+    thesis_content = {}
+    
+    # Usamos un ThreadPoolExecutor para ejecutar en paralelo
+    with ThreadPoolExecutor() as executor:
+        # Lanzar tareas simultáneamente
+        future_to_section = {executor.submit(generate_chapter_content, section['title']): section for section in thesis_structure}
+        
+        # Procesar los resultados a medida que se completan
+        for future in future_to_section:
+            section = future_to_section[future]
+            try:
+                thesis_content[section['title']] = future.result()
+            except Exception as exc:
+                thesis_content[section['title']] = f"Error al generar contenido: {exc}"
+    
+    return thesis_content
+
+st.title("Generación Simultánea de Tesis Jurídica con Exportación a DOCX")
 
 # Sección de Generación de Tesis
 st.header("Generación de Tesis")
@@ -83,12 +103,9 @@ if st.button("Generar Tesis y Estructura"):
     # Procesar la estructura en un formato que se pueda utilizar
     thesis_structure = [{"title": chapter.strip()} for chapter in structure_response.split("\n") if chapter.strip()]
     
-    # Generar contenido extenso para cada capítulo
-    st.subheader("Generando contenido extenso para cada capítulo...")
-    thesis_content = {}
-    for section in thesis_structure:
-        st.write(f"Generando contenido para el capítulo: {section['title']}")
-        thesis_content[section['title']] = generate_chapter_content(section['title'], min_pages=7)
+    # Generar contenido extenso para cada capítulo de forma simultánea
+    st.subheader("Generando contenido extenso para cada capítulo de forma simultánea...")
+    thesis_content = generate_all_chapters_concurrently(thesis_structure)
     
     # Exportar a DOCX
     doc_title = f"Tesis sobre {thesis_topic}"
