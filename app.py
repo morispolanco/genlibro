@@ -1,10 +1,7 @@
 import streamlit as st
 import requests
-import json
 from docx import Document
 from docx.shared import Pt
-from docx.oxml.ns import qn
-from docx.shared import RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
@@ -35,50 +32,39 @@ def together_complete(prompt, max_tokens=500):
     else:
         return f"Error: {response.status_code}, {response.text}"
 
-# Función para generar el contenido de cada capítulo con al menos siete páginas simuladas
-def generate_chapter_content(chapter_title, min_pages=7):
-    page_word_count = 350  # Aproximación de palabras por página
-    min_word_count = page_word_count * min_pages  # Palabras mínimas por capítulo
+# Función para generar un cuento largo imitando el estilo de un autor latinoamericano
+def generate_story(story_number, author_name):
+    prompt = f"Escribe un cuento largo número {story_number} imitando el estilo del autor latinoamericano {author_name}. El cuento debe ser detallado, con un desarrollo profundo de los personajes y las emociones, en un tono similar al del autor mencionado."
     
-    prompt_content = f"Escribe un contenido extenso para el capítulo titulado '{chapter_title}' en el libro. El contenido debe tener al menos {min_word_count} palabras, evitar repeticiones y ser coherente, sin divisiones internas."
+    # Generar el cuento completo
+    story = together_complete(prompt, max_tokens=1000)  # Puedes ajustar max_tokens para cuentos más largos si es necesario
     
-    # Dividir la generación de contenido en varias llamadas si es necesario
-    content = ""
-    while len(content.split()) < min_word_count:
-        new_content = together_complete(prompt_content, max_tokens=1000)  # Generar bloques grandes de texto
-        content += " " + new_content
-    
-    return content.strip()
+    return story
 
-# Función para generar el documento DOCX basado en la estructura y contenido con formateo
-def generate_formatted_docx(title, thesis_structure, thesis_content):
+# Función para generar el documento DOCX con los 24 cuentos
+def generate_stories_docx(title, author_name, stories):
     doc = Document()
     
     # Formato del título del libro
     title_heading = doc.add_heading(title, 0)
     title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Estilos personalizados para los capítulos y párrafos
+    # Formato del nombre del autor
+    doc.add_paragraph(f"Imitando el estilo de {author_name}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Formato para los cuentos
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Times New Roman'
     font.size = Pt(12)
     
-    # Aplicar formato a los capítulos y el contenido
-    for section in thesis_structure:
-        # Formato del título de cada capítulo
-        chapter_title = doc.add_heading(section['title'], level=1)
-        chapter_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        chapter_title.style.font.name = 'Arial'
-        chapter_title.style.font.size = Pt(14)
-        chapter_title.style.font.bold = True
-        chapter_title.style.font.color.rgb = RGBColor(0, 0, 0)
+    for i, story in enumerate(stories, start=1):
+        # Título de cada cuento
+        story_title = f"Cuento {i}"
+        doc.add_heading(story_title, level=1)
         
-        # Formato del contenido de cada capítulo
-        paragraph = doc.add_paragraph(thesis_content[section['title']])
-        paragraph_format = paragraph.paragraph_format
-        paragraph_format.line_spacing = Pt(18)  # Espaciado entre líneas
-        paragraph_format.space_after = Pt(12)   # Espacio después del párrafo
+        # Cuerpo del cuento
+        doc.add_paragraph(story)
     
     # Guardar el documento en un buffer
     buffer = BytesIO()
@@ -86,58 +72,44 @@ def generate_formatted_docx(title, thesis_structure, thesis_content):
     buffer.seek(0)
     return buffer
 
-# Función para generar contenido simultáneamente utilizando multithreading
-def generate_all_chapters_concurrently(thesis_structure):
-    thesis_content = {}
+# Función para generar los 24 cuentos simultáneamente utilizando multithreading
+def generate_all_stories(author_name):
+    stories = []
     
     # Usamos un ThreadPoolExecutor para ejecutar en paralelo
     with ThreadPoolExecutor() as executor:
-        # Lanzar tareas simultáneamente
-        future_to_section = {executor.submit(generate_chapter_content, section['title']): section for section in thesis_structure}
+        futures = [executor.submit(generate_story, i+1, author_name) for i in range(24)]
         
         # Procesar los resultados a medida que se completan
-        for future in future_to_section:
-            section = future_to_section[future]
+        for future in futures:
             try:
-                thesis_content[section['title']] = future.result()
+                stories.append(future.result())
             except Exception as exc:
-                thesis_content[section['title']] = f"Error al generar contenido: {exc}"
+                stories.append(f"Error al generar cuento: {exc}")
     
-    return thesis_content
+    return stories
 
-st.title("Generación Simultánea de Libros con Exportación Formateada a DOCX")
+st.title("Generación de 24 Cuentos Largos Imitando el Estilo de un Autor Latinoamericano")
 
-# Sección de Generación de Libro
-st.header("Generación de Libro")
-book_title = st.text_input("Ingresa el título de tu libro:")
-book_topic = st.text_input("Ingresa el tema central de tu libro (puede ser cualquier tema):")
+# Sección de generación de cuentos
+st.header("Generación de Cuentos")
+author_name = st.text_input("Ingresa el nombre del autor latinoamericano cuyo estilo se va a imitar:")
 
-if st.button("Generar Libro y Estructura"):
-    # Generar la introducción y estructura del libro
-    prompt_thesis = f"Proporciona una propuesta de libro sobre el tema: '{book_topic}'."
-    book_statement = together_complete(prompt_thesis)
-    st.subheader("Propuesta del Libro")
-    st.write(book_statement)
+if st.button("Generar 24 Cuentos y Exportar"):
+    st.subheader("Generando los 24 cuentos largos...")
     
-    # Generar la estructura automáticamente basada en el tema
-    prompt_structure = f"Con base en el siguiente libro: '{book_statement}', propone una tabla de contenidos detallada para el libro, sin divisiones internas en los capítulos. Incluye una introducción y un número adecuado de capítulos que cubran el tema de manera exhaustiva."
-    structure_response = together_complete(prompt_structure)
-    st.subheader("Estructura Propuesta")
-    st.write(structure_response)
+    # Generar los 24 cuentos imitando el estilo del autor
+    stories = generate_all_stories(author_name)
     
-    # Procesar la estructura en un formato que se pueda utilizar
-    thesis_structure = [{"title": chapter.strip()} for chapter in structure_response.split("\n") if chapter.strip()]
+    # Título del libro
+    book_title = f"24 Cuentos Largos Imitando el Estilo de {author_name}"
     
-    # Generar contenido extenso para cada capítulo de forma simultánea
-    st.subheader("Generando contenido extenso para cada capítulo de forma simultánea...")
-    thesis_content = generate_all_chapters_concurrently(thesis_structure)
-    
-    # Exportar a DOCX con formateo
-    docx_buffer = generate_formatted_docx(book_title, thesis_structure, thesis_content)
+    # Exportar a DOCX
+    docx_buffer = generate_stories_docx(book_title, author_name, stories)
     
     # Descargar el archivo DOCX
     st.download_button(
-        label="Descargar Libro en DOCX Formateado",
+        label="Descargar Libro en DOCX",
         data=docx_buffer,
         file_name=f"{book_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
