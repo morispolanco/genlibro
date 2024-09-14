@@ -23,7 +23,7 @@ def together_complete(prompt, max_tokens=500):
         "temperature": 0.7,
         "top_p": 0.7,
         "top_k": 50,
-        "repetition_penalty": 1.1,  # Penalización para evitar repeticiones
+        "repetition_penalty": 1.2,  # Aumentar la penalización por repeticiones
         "stop": ["<|eot_id|>"]
     }
     response = requests.post(url, headers=headers, json=data)
@@ -31,6 +31,23 @@ def together_complete(prompt, max_tokens=500):
         return response.json()['choices'][0]['text'].strip()
     else:
         return f"Error: {response.status_code}, {response.text}"
+
+# Función para evitar repeticiones de frases o palabras en el contenido generado
+def remove_repetitions(content):
+    # Dividir el contenido en palabras y eliminar repeticiones simples
+    words = content.split()
+    seen = set()
+    filtered_content = []
+    
+    for word in words:
+        if word not in seen:
+            filtered_content.append(word)
+            seen.add(word)
+        else:
+            # Opcional: Agregar lógica adicional si se desea manejar repeticiones más complejas
+            continue
+    
+    return " ".join(filtered_content)
 
 # Función para generar un capítulo de la novela con al menos 2400 palabras y diálogos con raya
 def generate_chapter(chapter_number, title, genre, audience):
@@ -42,6 +59,9 @@ def generate_chapter(chapter_number, title, genre, audience):
     while len(content.split()) < word_count_goal:
         new_content = together_complete(prompt, max_tokens=1000)
         content += " " + new_content
+    
+    # Remover repeticiones del contenido generado
+    content = remove_repetitions(content)
     
     return content.strip()
 
@@ -93,7 +113,7 @@ def generate_all_chapters(title, genre, audience, num_chapters=20):
     
     return chapters
 
-st.title("Generación de Novela Larga con Capítulos de al Menos 2400 Palabras y Diálogos con Raya")
+st.title("Generación de Novela Larga sin Repetición de Contenido")
 
 # Sección de generación de novela
 st.header("Generación de Novela")
