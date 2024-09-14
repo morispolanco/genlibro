@@ -32,39 +32,39 @@ def together_complete(prompt, max_tokens=500):
     else:
         return f"Error: {response.status_code}, {response.text}"
 
-# Función para generar un cuento largo imitando el estilo de un autor latinoamericano
-def generate_story(story_number, author_name):
-    prompt = f"Escribe un cuento largo número {story_number} imitando el estilo del autor latinoamericano {author_name}. El cuento debe ser detallado, con un desarrollo profundo de los personajes y las emociones, en un tono similar al del autor mencionado."
+# Función para generar un capítulo de la novela
+def generate_chapter(chapter_number, title, genre, audience):
+    prompt = f"Escribe el capítulo {chapter_number} de una novela larga titulada '{title}', en el género de {genre}, para una audiencia de {audience}. El capítulo debe ser extenso, detallado y mantener la coherencia narrativa del libro."
     
-    # Generar el cuento completo
-    story = together_complete(prompt, max_tokens=1000)  # Puedes ajustar max_tokens para cuentos más largos si es necesario
+    # Generar el capítulo completo
+    chapter = together_complete(prompt, max_tokens=1000)  # Puedes ajustar max_tokens para capítulos más largos si es necesario
     
-    return story
+    return chapter
 
-# Función para generar el documento DOCX con los 24 cuentos
-def generate_stories_docx(title, author_name, stories):
+# Función para generar el documento DOCX con la novela
+def generate_novel_docx(title, genre, audience, chapters):
     doc = Document()
     
-    # Formato del título del libro
+    # Formato del título de la novela
     title_heading = doc.add_heading(title, 0)
     title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Formato del nombre del autor
-    doc.add_paragraph(f"Imitando el estilo de {author_name}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Formato del género y audiencia
+    doc.add_paragraph(f"Género: {genre} | Audiencia: {audience}").alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Formato para los cuentos
+    # Estilo para los capítulos
     style = doc.styles['Normal']
     font = style.font
     font.name = 'Times New Roman'
     font.size = Pt(12)
     
-    for i, story in enumerate(stories, start=1):
-        # Título de cada cuento
-        story_title = f"Cuento {i}"
-        doc.add_heading(story_title, level=1)
+    for i, chapter in enumerate(chapters, start=1):
+        # Título de cada capítulo
+        chapter_title = f"Capítulo {i}"
+        doc.add_heading(chapter_title, level=1)
         
-        # Cuerpo del cuento
-        doc.add_paragraph(story)
+        # Cuerpo del capítulo
+        doc.add_paragraph(chapter)
     
     # Guardar el documento en un buffer
     buffer = BytesIO()
@@ -72,45 +72,44 @@ def generate_stories_docx(title, author_name, stories):
     buffer.seek(0)
     return buffer
 
-# Función para generar los 24 cuentos simultáneamente utilizando multithreading
-def generate_all_stories(author_name):
-    stories = []
+# Función para generar múltiples capítulos simultáneamente utilizando multithreading
+def generate_all_chapters(title, genre, audience, num_chapters=20):
+    chapters = []
     
     # Usamos un ThreadPoolExecutor para ejecutar en paralelo
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(generate_story, i+1, author_name) for i in range(24)]
+        futures = [executor.submit(generate_chapter, i+1, title, genre, audience) for i in range(num_chapters)]
         
         # Procesar los resultados a medida que se completan
         for future in futures:
             try:
-                stories.append(future.result())
+                chapters.append(future.result())
             except Exception as exc:
-                stories.append(f"Error al generar cuento: {exc}")
+                chapters.append(f"Error al generar capítulo: {exc}")
     
-    return stories
+    return chapters
 
-st.title("Generación de 24 Cuentos Largos Imitando el Estilo de un Autor Latinoamericano")
+st.title("Generación de Novela Larga Basada en Título, Género y Audiencia")
 
-# Sección de generación de cuentos
-st.header("Generación de Cuentos")
-author_name = st.text_input("Ingresa el nombre del autor latinoamericano cuyo estilo se va a imitar:")
+# Sección de generación de novela
+st.header("Generación de Novela")
+novel_title = st.text_input("Ingresa el título de tu novela:")
+novel_genre = st.text_input("Ingresa el género de tu novela:")
+novel_audience = st.text_input("Ingresa la audiencia de tu novela (ej. jóvenes adultos, adultos, niños):")
 
-if st.button("Generar 24 Cuentos y Exportar"):
-    st.subheader("Generando los 24 cuentos largos...")
+if st.button("Generar Novela y Exportar"):
+    st.subheader("Generando los capítulos de la novela...")
     
-    # Generar los 24 cuentos imitando el estilo del autor
-    stories = generate_all_stories(author_name)
+    # Generar los capítulos de la novela en paralelo
+    chapters = generate_all_chapters(novel_title, novel_genre, novel_audience)
     
-    # Título del libro
-    book_title = f"24 Cuentos Largos Imitando el Estilo de {author_name}"
-    
-    # Exportar a DOCX
-    docx_buffer = generate_stories_docx(book_title, author_name, stories)
+    # Exportar la novela a DOCX
+    docx_buffer = generate_novel_docx(novel_title, novel_genre, novel_audience, chapters)
     
     # Descargar el archivo DOCX
     st.download_button(
-        label="Descargar Libro en DOCX",
+        label="Descargar Novela en DOCX",
         data=docx_buffer,
-        file_name=f"{book_title}.docx",
+        file_name=f"{novel_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
