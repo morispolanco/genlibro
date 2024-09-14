@@ -2,6 +2,10 @@ import streamlit as st
 import requests
 import json
 from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from docx.shared import RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 
@@ -22,7 +26,7 @@ def together_complete(prompt, max_tokens=500):
         "temperature": 0.7,
         "top_p": 0.7,
         "top_k": 50,
-        "repetition_penalty": 1,
+        "repetition_penalty": 1.1,  # Penalización para evitar repeticiones
         "stop": ["<|eot_id|>"]
     }
     response = requests.post(url, headers=headers, json=data)
@@ -36,7 +40,7 @@ def generate_chapter_content(chapter_title, min_pages=7):
     page_word_count = 350  # Aproximación de palabras por página
     min_word_count = page_word_count * min_pages  # Palabras mínimas por capítulo
     
-    prompt_content = f"Escribe un contenido extenso para el capítulo titulado '{chapter_title}' en un libro de introducción a la filosofía. El contenido debe tener al menos {min_word_count} palabras, incluyendo referencias a filósofos relevantes, corrientes filosóficas y ejemplos para facilitar la comprensión."
+    prompt_content = f"Escribe un contenido extenso para el capítulo titulado '{chapter_title}' en el libro. El contenido debe tener al menos {min_word_count} palabras, evitar repeticiones y ser coherente, sin divisiones internas."
     
     # Dividir la generación de contenido en varias llamadas si es necesario
     content = ""
@@ -46,15 +50,35 @@ def generate_chapter_content(chapter_title, min_pages=7):
     
     return content.strip()
 
-# Función para generar el documento DOCX basado en la estructura y contenido
-def generate_docx(title, thesis_structure, thesis_content):
+# Función para generar el documento DOCX basado en la estructura y contenido con formateo
+def generate_formatted_docx(title, thesis_structure, thesis_content):
     doc = Document()
-    doc.add_heading(title, 0)
     
-    # Crear el contenido dinámicamente
+    # Formato del título del libro
+    title_heading = doc.add_heading(title, 0)
+    title_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Estilos personalizados para los capítulos y párrafos
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Times New Roman'
+    font.size = Pt(12)
+    
+    # Aplicar formato a los capítulos y el contenido
     for section in thesis_structure:
-        doc.add_heading(section['title'], level=1)
-        doc.add_paragraph(thesis_content[section['title']])
+        # Formato del título de cada capítulo
+        chapter_title = doc.add_heading(section['title'], level=1)
+        chapter_title.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        chapter_title.style.font.name = 'Arial'
+        chapter_title.style.font.size = Pt(14)
+        chapter_title.style.font.bold = True
+        chapter_title.style.font.color.rgb = RGBColor(0, 0, 0)
+        
+        # Formato del contenido de cada capítulo
+        paragraph = doc.add_paragraph(thesis_content[section['title']])
+        paragraph_format = paragraph.paragraph_format
+        paragraph_format.line_spacing = Pt(18)  # Espaciado entre líneas
+        paragraph_format.space_after = Pt(12)   # Espacio después del párrafo
     
     # Guardar el documento en un buffer
     buffer = BytesIO()
@@ -81,21 +105,22 @@ def generate_all_chapters_concurrently(thesis_structure):
     
     return thesis_content
 
-st.title("Generación Simultánea de Libro de Introducción a la Filosofía con Exportación a DOCX")
+st.title("Generación Simultánea de Libros con Exportación Formateada a DOCX")
 
 # Sección de Generación de Libro
 st.header("Generación de Libro")
-book_topic = st.text_input("Ingresa el tema central de tu libro de filosofía:")
+book_title = st.text_input("Ingresa el título de tu libro:")
+book_topic = st.text_input("Ingresa el tema central de tu libro (puede ser cualquier tema):")
 
 if st.button("Generar Libro y Estructura"):
     # Generar la introducción y estructura del libro
-    prompt_thesis = f"Proporciona un libro de introducción a la filosofía circunscrito al tema: '{book_topic}'."
+    prompt_thesis = f"Proporciona una propuesta de libro sobre el tema: '{book_topic}'."
     book_statement = together_complete(prompt_thesis)
     st.subheader("Propuesta del Libro")
     st.write(book_statement)
     
     # Generar la estructura automáticamente basada en el tema
-    prompt_structure = f"Con base en el siguiente libro: '{book_statement}', propone una tabla de contenidos detallada para un libro de introducción a la filosofía. Incluye una introducción y un número adecuado de capítulos que cubran el tema de manera exhaustiva."
+    prompt_structure = f"Con base en el siguiente libro: '{book_statement}', propone una tabla de contenidos detallada para el libro, sin divisiones internas en los capítulos. Incluye una introducción y un número adecuado de capítulos que cubran el tema de manera exhaustiva."
     structure_response = together_complete(prompt_structure)
     st.subheader("Estructura Propuesta")
     st.write(structure_response)
@@ -107,14 +132,13 @@ if st.button("Generar Libro y Estructura"):
     st.subheader("Generando contenido extenso para cada capítulo de forma simultánea...")
     thesis_content = generate_all_chapters_concurrently(thesis_structure)
     
-    # Exportar a DOCX
-    doc_title = f"Introducción a la Filosofía: {book_topic}"
-    docx_buffer = generate_docx(doc_title, thesis_structure, thesis_content)
+    # Exportar a DOCX con formateo
+    docx_buffer = generate_formatted_docx(book_title, thesis_structure, thesis_content)
     
     # Descargar el archivo DOCX
     st.download_button(
-        label="Descargar Libro en DOCX",
+        label="Descargar Libro en DOCX Formateado",
         data=docx_buffer,
-        file_name=f"{doc_title}.docx",
+        file_name=f"{book_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
