@@ -13,7 +13,7 @@ def together_complete(prompt, max_tokens=500):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
         "prompt": prompt,
         "max_tokens": max_tokens,
         "temperature": 0.7,
