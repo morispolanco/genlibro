@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import json
+from docx import Document
+from io import BytesIO
 
 # Obtener las claves de API de los secretos de Streamlit
 together_api_key = st.secrets["TOGETHER_API_KEY"]
@@ -13,7 +15,7 @@ def together_complete(prompt, max_tokens=500):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "model": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
         "prompt": prompt,
         "max_tokens": max_tokens,
         "temperature": 0.7,
@@ -43,17 +45,23 @@ def generate_chapter_content(chapter_title, min_pages=7):
     
     return content.strip()
 
-# Función para convertir el contenido a formato HTML
-def format_to_html(thesis_title, thesis_structure, thesis_content):
-    html_content = f"<h1>{thesis_title}</h1>\n"
+# Función para generar el documento DOCX basado en la estructura y contenido
+def generate_docx(title, thesis_structure, thesis_content):
+    doc = Document()
+    doc.add_heading(title, 0)
     
+    # Crear el contenido dinámicamente
     for section in thesis_structure:
-        html_content += f"<h2>{section['title']}</h2>\n"
-        html_content += f"<p>{thesis_content[section['title']]}</p>\n"
+        doc.add_heading(section['title'], level=1)
+        doc.add_paragraph(thesis_content[section['title']])
     
-    return html_content
+    # Guardar el documento en un buffer
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
 
-st.title("Generación de Tesis Jurídica con Contenido Extenso y Formato HTML")
+st.title("Generación de Tesis Jurídica con Contenido Extenso y Exportación a DOCX")
 
 # Sección de Generación de Tesis
 st.header("Generación de Tesis")
@@ -82,18 +90,14 @@ if st.button("Generar Tesis y Estructura"):
         st.write(f"Generando contenido para el capítulo: {section['title']}")
         thesis_content[section['title']] = generate_chapter_content(section['title'], min_pages=7)
     
-    # Formatear el contenido en HTML
+    # Exportar a DOCX
     doc_title = f"Tesis sobre {thesis_topic}"
-    html_content = format_to_html(doc_title, thesis_structure, thesis_content)
+    docx_buffer = generate_docx(doc_title, thesis_structure, thesis_content)
     
-    # Mostrar el contenido generado en HTML
-    st.subheader("Contenido Formateado en HTML")
-    st.markdown(html_content, unsafe_allow_html=True)
-    
-    # Descargar el archivo HTML
+    # Descargar el archivo DOCX
     st.download_button(
-        label="Descargar Tesis en HTML",
-        data=html_content,
-        file_name=f"{doc_title}.html",
-        mime="text/html"
+        label="Descargar Tesis en DOCX",
+        data=docx_buffer,
+        file_name=f"{doc_title}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
