@@ -5,6 +5,7 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
+import textwrap
 
 # Obtener las claves de API de los secretos de Streamlit
 together_api_key = st.secrets["TOGETHER_API_KEY"]
@@ -44,10 +45,19 @@ def remove_repetitions(content):
             filtered_content.append(word)
             seen.add(word)
         else:
-            # Opcional: Agregar lógica adicional si se desea manejar repeticiones más complejas
             continue
     
     return " ".join(filtered_content)
+
+# Función para dividir el contenido en párrafos coherentes
+def format_paragraphs(content):
+    # Usamos textwrap para dividir el contenido en párrafos
+    paragraphs = content.split("\n")
+    formatted_paragraphs = []
+    for paragraph in paragraphs:
+        if len(paragraph.strip()) > 0:
+            formatted_paragraphs.append(textwrap.fill(paragraph, width=80))
+    return "\n\n".join(formatted_paragraphs)
 
 # Función para generar un capítulo de la novela con al menos 2400 palabras y diálogos con raya
 def generate_chapter(chapter_number, title, genre, audience):
@@ -60,8 +70,9 @@ def generate_chapter(chapter_number, title, genre, audience):
         new_content = together_complete(prompt, max_tokens=1000)
         content += " " + new_content
     
-    # Remover repeticiones del contenido generado
+    # Remover repeticiones y dividir en párrafos coherentes
     content = remove_repetitions(content)
+    content = format_paragraphs(content)
     
     return content.strip()
 
@@ -113,7 +124,7 @@ def generate_all_chapters(title, genre, audience, num_chapters=20):
     
     return chapters
 
-st.title("Generación de Novela Larga sin Repetición de Contenido")
+st.title("Generación de Novela Larga con Capítulos Completos y Párrafos Bien Divididos")
 
 # Sección de generación de novela
 st.header("Generación de Novela")
